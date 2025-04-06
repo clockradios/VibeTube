@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header card-header-dark">
+                <h5 class="card-title mb-0">Application Settings</h5>
+            </div>
+            <div class="card-body">
+                <form action="/update_setting" method="post">
+                    <div class="mb-3">
+                        <label for="filename_format" class="form-label">Filename Format</label>
+                        <input type="text" class="form-control" id="filename_format" name="value" 
+                               value="{{ settings.filename_format }}" required>
+                        <input type="hidden" name="key" value="filename_format">
+                        <div class="form-text">
+                            Format for downloaded files. Available variables:
+                            <ul>
+                                <li><code>{video_id}</code> - YouTube video ID</li>
+                                <li><code>{title}</code> - Video title</li>
+                                <li><code>{channel}</code> - Channel name</li>
+                                <li><code>{upload_date}</code> - Upload date</li>
+                                <li><code>{ext}</code> - File extension (mp4)</li>
+                            </ul>
+                            Default: <code>{video_id} - {title}.{ext}</code>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-2">Update</button>
+                    </div>
+                </form>
+                
+                <hr>
+                
+                <form action="/update_setting" method="post">
+                    <div class="mb-3">
+                        <label for="check_interval" class="form-label">Check Interval (seconds)</label>
+                        <input type="number" class="form-control" id="check_interval" name="value" 
+                               value="{{ settings.check_interval }}" min="300" required>
+                        <input type="hidden" name="key" value="check_interval">
+                        <div class="form-text">
+                            How often to check for new videos in channels and playlists (in seconds).
+                            <br>Default: 3600 (1 hour). Minimum: 300 (5 minutes).
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-2">Update</button>
+                    </div>
+                </form>
+                
+                <hr>
+                
+                <form action="/update_setting" method="post">
+                    <div class="mb-3">
+                        <label for="auto_download" class="form-label">Auto Download New Videos</label>
+                        <select class="form-select" id="auto_download" name="value">
+                            <option value="true" {% if settings.auto_download == 'true' %}selected{% endif %}>Enabled</option>
+                            <option value="false" {% if settings.auto_download == 'false' %}selected{% endif %}>Disabled</option>
+                        </select>
+                        <input type="hidden" name="key" value="auto_download">
+                        <div class="form-text">
+                            Automatically download new videos when they're discovered in your sources.
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-2">Update</button>
+                    </div>
+                </form>
+                
+                <hr>
+                
+                <form action="/update_setting" method="post">
+                    <div class="mb-3">
+                        <label for="download_delay" class="form-label">Download Delay (seconds)</label>
+                        <input type="number" class="form-control" id="download_delay" name="value" 
+                               value="{{ settings.download_delay }}" min="5" required>
+                        <input type="hidden" name="key" value="download_delay">
+                        <div class="form-text">
+                            Time to wait between consecutive downloads (in seconds).
+                            <br>Default: 60 (1 minute). Minimum: 5 seconds.
+                            <br><span class="text-info">Lower values may cause rate limiting from YouTube.</span>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-2">Update</button>
+                    </div>
+                </form>
+                
+                <hr>
+                
+                <form action="/update_setting" method="post">
+                    <div class="mb-3">
+                        <label for="scan_interval" class="form-label">Library Scan Interval (seconds)</label>
+                        <input type="number" class="form-control" id="scan_interval" name="value" 
+                               value="{{ settings.scan_interval }}" min="3600" required>
+                        <input type="hidden" name="key" value="scan_interval">
+                        <div class="form-text">
+                            How often to scan your library for missing files (in seconds).
+                            <br>Default: 86400 (24 hours). Minimum: 3600 (1 hour).
+                            <br><span class="text-info">This checks if any downloaded files have been deleted outside the application.</span>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-2">Update</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header card-header-info">
+                <h5 class="card-title mb-0">Subfolders</h5>
+            </div>
+            <div class="card-body">
+                <p>Organize your downloads by creating and managing subfolders:</p>
+                
+                <ul>
+                    <li>Create subfolders for different channels, topics, or quality levels</li>
+                    <li>Assign sources (videos, channels, playlists) to specific subfolders</li>
+                    <li>Set a default subfolder for new sources</li>
+                </ul>
+                
+                <a href="/subfolders" class="btn btn-primary">
+                    <i class="bi bi-folder-plus"></i> Manage Subfolders
+                </a>
+                
+                {% if subfolders %}
+                <div class="mt-3">
+                    <h6>Current Subfolders:</h6>
+                    <ul class="list-group">
+                        {% for subfolder in subfolders %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ subfolder.name }}
+                            {% if subfolder.is_default %}
+                            <span class="badge bg-success">Default</span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+
+        
+        <div class="card mt-4">
+            <div class="card-header card-header-dark d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-globe me-2"></i>YouTube Authentication
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="/update_setting" class="mb-4">
+                    <div class="mb-3">
+                        <label for="youtube_cookies" class="form-label">YouTube Cookies</label>
+                        <textarea id="youtube_cookies" name="value" class="form-control" rows="5" placeholder="Paste your YouTube cookies here...">{{ settings.youtube_cookies if settings.youtube_cookies else "" }}</textarea>
+                        <input type="hidden" name="key" value="youtube_cookies">
+                        <div class="form-text text-muted">
+                            <small>
+                                Cookies from your YouTube account allow downloading age-restricted and private videos. 
+                                Use a browser extension like "Cookie-Editor" to export cookies from youtube.com as Netscape format.
+                            </small>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i>Save Cookie
+                        </button>
+                        <a href="#" class="btn btn-danger ms-2" onclick="clearCookie(event)">
+                            <i class="bi bi-trash me-1"></i>Clear Cookie
+                        </a>
+                    </div>
+                </form>
+                
+                <!-- Add a hidden form for clearing cookies -->
+                <form id="clear-cookie-form" method="post" action="/clear_youtube_cookies" class="d-none"></form>
+                
+                <script>
+                    function clearCookie(event) {
+                        event.preventDefault();
+                        if (confirm("Are you sure you want to clear your YouTube cookie?")) {
+                            document.getElementById('clear-cookie-form').submit();
+                        }
+                    }
+                </script>
+                
+                <div class="alert alert-info">
+                    <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>How to get YouTube cookies:</h6>
+                    <ol class="mb-0">
+                        <li>Log in to your YouTube account in your browser</li>
+                        <li>Install a cookie manager extension (e.g., "Cookie-Editor" for <a href="https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm" target="_blank">Chrome</a> or <a href="https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/" target="_blank">Firefox</a>)</li>
+                        <li>Go to youtube.com and open the extension</li>
+                        <li>Click "Export" and choose "Netscape format"</li>
+                        <li>Copy the exported text and paste it here</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

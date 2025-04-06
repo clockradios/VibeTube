@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  ytdlp-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ytdlp-webui
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./db:/app/db
+      - ./downloads:/app/downloads
+      - ./.env:/app/.env
+    env_file:
+      - ./.env
+    restart: unless-stopped 

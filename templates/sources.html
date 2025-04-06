@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header card-header-dark">
+                <h5 class="card-title mb-0">Add New Source</h5>
+            </div>
+            <div class="card-body">
+                <form action="/add_source" method="post" x-data="{ sourceType: 'video' }">
+                    <div class="mb-3">
+                        <label for="source_type" class="form-label">Source Type</label>
+                        <select class="form-select" id="source_type" name="source_type" x-model="sourceType">
+                            <option value="video">Video</option>
+                            <option value="channel">Channel</option>
+                            <option value="playlist">Playlist</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="source_id" class="form-label" x-text="sourceType === 'video' ? 'Video ID' : (sourceType === 'channel' ? 'Channel ID' : 'Playlist ID')"></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="source_id" name="source_id" required
+                                   x-bind:placeholder="sourceType === 'video' ? 'dQw4w9WgXcQ' : (sourceType === 'channel' ? 'UC...' : 'PL...')">
+                            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#helpModal">
+                                <i class="bi bi-question-circle"></i>
+                            </button>
+                        </div>
+                        <div class="form-text" x-show="sourceType === 'video'">
+                            Enter the YouTube video ID (found in the URL after v=)
+                        </div>
+                        <div class="form-text" x-show="sourceType === 'channel'">
+                            Enter the YouTube channel ID (found in the URL after channel/)
+                        </div>
+                        <div class="form-text" x-show="sourceType === 'playlist'">
+                            Enter the YouTube playlist ID (found in the URL after list=)
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="subfolder_id" class="form-label">Subfolder</label>
+                        <select class="form-select" id="subfolder_id" name="subfolder_id">
+                            <option value="">-- Use Default Subfolder --</option>
+                            {% for subfolder in subfolders %}
+                            <option value="{{ subfolder.id }}" {% if subfolder.is_default %}selected{% endif %}>
+                                {{ subfolder.name }}{% if subfolder.is_default %} (Default){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Select a subfolder to organize your downloads. <a href="/subfolders">Manage subfolders</a>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" x-show="sourceType !== 'video'">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="auto_download" name="auto_download" checked>
+                            <label class="form-check-label" for="auto_download">
+                                Auto-download new videos
+                            </label>
+                            <div class="form-text">
+                                When enabled, new videos will be automatically added to the download queue. When disabled, videos will be tracked but must be downloaded manually.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add Source
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header card-header-dark d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Your Sources</h5>
+                <button class="btn btn-sm btn-outline-light" onclick="refreshSources()">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh All
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped table-sticky-header mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Added</th>
+                                <th>Last Checked</th>
+                                <th>Videos</th>
+                                <th>Auto-Download</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for source_item in sources %}
+                            <tr>
+                                <td>{{ source_item.source.name }}</td>
+                                <td>
+                                    <span class="badge {% if source_item.source.source_type == 'video' %}bg-info{% elif source_item.source.source_type == 'channel' %}bg-primary{% else %}bg-warning{% endif %}">
+                                        {{ source_item.source.source_type|capitalize }}
+                                    </span>
+                                </td>
+                                <td>{{ source_item.source.added_at.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ source_item.source.last_checked.strftime('%Y-%m-%d %H:%M') if source_item.source.last_checked else 'Never' }}</td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <a href="/videos?source_id={{ source_item.source.id }}" class="badge bg-secondary">
+                                            {{ source_item.video_count }} videos
+                                        </a>
+                                        <small class="text-success">{{ source_item.downloaded_count }} downloaded</small>
+                                        <small class="text-primary">{{ source_item.pending_count }} pending</small>
+                                        {% if source_item.deleted_count > 0 %}
+                                        <small class="text-danger">{{ source_item.deleted_count }} deleted</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if source_item.source.source_type != 'video' %}
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch" 
+                                                   id="autoDownload-{{ source_item.source.id }}" 
+                                                   {% if source_item.source.auto_download %}checked{% endif %}
+                                                   onchange="toggleAutoDownload({{ source_item.source.id }})">
+                                            <label class="form-check-label" for="autoDownload-{{ source_item.source.id }}">
+                                                {% if source_item.source.auto_download %}
+                                                    Auto
+                                                {% else %}
+                                                    Manual
+                                                {% endif %}
+                                            </label>
+                                        </div>
+                                    {% else %}
+                                        <span class="badge bg-secondary">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="/videos?source_id={{ source_item.source.id }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteSource({{ source_item.source.id }})">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            
+                            {% if not sources %}
+                            <tr>
+                                <td colspan="7" class="text-center py-3">
+                                    <p class="mb-0">No sources added yet.</p>
+                                    <p class="mb-0">Add a video, channel, or playlist above.</p>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="helpModalLabel">How to Find IDs</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Video ID</h6>
+                <p>The video ID is the part after <code>v=</code> in a YouTube URL:</p>
+                <p><code>https://www.youtube.com/watch?v=<strong>dQw4w9WgXcQ</strong></code></p>
+                
+                <hr>
+                
+                <h6>Channel ID</h6>
+                <p>The channel ID is the part after <code>channel/</code> in a YouTube URL:</p>
+                <p><code>https://www.youtube.com/channel/<strong>UCuAXFkgsw1L7xaCfnd5JJOw</strong></code></p>
+                <p>Note: Many channels use custom URLs. You might need to check the page source or visit the About page to find the channel ID.</p>
+                
+                <hr>
+                
+                <h6>Playlist ID</h6>
+                <p>The playlist ID is the part after <code>list=</code> in a YouTube URL:</p>
+                <p><code>https://www.youtube.com/playlist?list=<strong>PLlaN88a7y2_q116mz1LmFY9bqHhZard5o</strong></code></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function refreshSources() {
+        fetch('/refresh_sources', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error refreshing sources');
+        });
+    }
+    
+    function deleteSource(sourceId) {
+        // First confirm deletion of the source
+        if (confirm('Are you sure you want to delete this source?')) {
+            // Then ask if they want to delete related video files
+            const deleteVideos = confirm('Do you also want to delete all video files associated with this source? If you choose No, the source will be removed but downloaded video files will remain on disk.');
+            
+            fetch(`/source/${sourceId}?delete_videos=${deleteVideos}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting source');
+            });
+        }
+    }
+    
+    function toggleAutoDownload(sourceId) {
+        fetch(`/toggle_auto_download/${sourceId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update the label
+                const label = document.querySelector(`label[for="autoDownload-${sourceId}"]`);
+                if (label) {
+                    label.textContent = data.auto_download ? 'Auto' : 'Manual';
+                }
+            } else {
+                alert('Failed to toggle auto-download setting');
+                // Reset the checkbox to its previous state
+                const checkbox = document.getElementById(`autoDownload-${sourceId}`);
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error toggling auto-download setting');
+            // Reset the checkbox to its previous state
+            const checkbox = document.getElementById(`autoDownload-${sourceId}`);
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+        });
+    }
+</script>
+{% endblock %} 

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header card-header-dark">
+                <h5 class="card-title mb-0">Add New Subfolder</h5>
+            </div>
+            <div class="card-body">
+                <form action="/add_subfolder" method="post">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Subfolder Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                        <div class="form-text">Name of the subfolder. This will be used to create a directory.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <input type="text" class="form-control" id="description" name="description">
+                        <div class="form-text">Optional description to help identify the purpose of this subfolder.</div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_default" name="is_default">
+                        <label class="form-check-label" for="is_default">Set as default subfolder</label>
+                        <div class="form-text">If checked, new sources will be saved to this subfolder by default.</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add Subfolder
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header card-header-dark">
+                <h5 class="card-title mb-0">Your Subfolders</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Path</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for subfolder in subfolders %}
+                            <tr>
+                                <td>{{ subfolder.name }}</td>
+                                <td><code>{{ subfolder.path }}</code></td>
+                                <td>{{ subfolder.description }}</td>
+                                <td>
+                                    {% if subfolder.is_default %}
+                                    <span class="badge bg-success">Default</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Optional</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ subfolder.created_at.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        {% if not subfolder.is_default %}
+                                        <form action="/set_default_subfolder/{{ subfolder.id }}" method="post">
+                                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                                <i class="bi bi-check-circle"></i> Set Default
+                                            </button>
+                                        </form>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteSubfolder({{ subfolder.id }})">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            
+                            {% if not subfolders %}
+                            <tr>
+                                <td colspan="6" class="text-center py-3">
+                                    <p class="mb-0">No subfolders added yet.</p>
+                                    <p class="mb-0">Add a subfolder above.</p>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function deleteSubfolder(subfolderId) {
+        if (confirm('Are you sure you want to delete this subfolder? Sources assigned to it will be moved to the default subfolder.')) {
+            fetch(`/subfolder/${subfolderId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting subfolder');
+            });
+        }
+    }
+</script>
+{% endblock %} 

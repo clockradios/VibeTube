@@ -1,0 +1,3051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ playlist.name }} - Vibe Playlist</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <!-- Video.js CSS -->
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden;
+            background-color: #121212;
+            color: #fff;
+        }
+        
+        /* Full page layout with proper scrolling */
+        .container-fluid {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .video-container {
+            position: relative;
+            height: 100vh;
+            width: 100%;
+            background-color: #000;
+            z-index: 1;
+            flex-shrink: 0;
+        }
+        
+        /* Content below the video */
+        .content-container {
+            position: relative;
+            z-index: 2; 
+            background-color: #121212;
+            flex-grow: 1;
+            width: 100%;
+            padding-top: 20px;
+        }
+        
+        /* Custom player controls */
+        .custom-player-controls {
+            position: relative;
+            width: 100%;
+            background-color: #1a1a1a;
+            padding: 15px;
+            border-bottom: 1px solid #333;
+            z-index: 3;
+        }
+        
+        .custom-player-controls .control-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .playback-controls button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        
+        .playback-controls button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .progress-container {
+            flex-grow: 1;
+            margin: 0 20px;
+            position: relative;
+            height: 8px;
+            background-color: #444;
+            border-radius: 4px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background-color: #0d6efd;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        
+        .time-display {
+            font-size: 0.875rem;
+            color: #ccc;
+            min-width: 100px;
+            text-align: center;
+        }
+        
+        .playlist-tools {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .playlist-tools button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.25rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        
+        .playlist-tools button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .playlist-tools button.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+        
+        .vjs-matrix.video-js {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .vjs-matrix.video-js .vjs-tech {
+            object-fit: contain; /* Ensures the video maintains aspect ratio */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Custom Video.js theme */
+        .vjs-matrix.video-js .vjs-control-bar {
+            background-color: rgba(0, 0, 0, 0.7);
+            opacity: 1;
+            visibility: visible;
+            display: flex;
+        }
+        
+        /* Always show controls */
+        .vjs-matrix.video-js:hover .vjs-control-bar,
+        .vjs-matrix.video-js .vjs-control-bar {
+            visibility: visible;
+            opacity: 1;
+            display: flex;
+        }
+        
+        .vjs-matrix .vjs-button > .vjs-icon-placeholder:before {
+            color: #fff;
+        }
+        
+        .vjs-matrix .vjs-play-progress {
+            background-color: #00aaff;
+        }
+        
+        .vjs-matrix .vjs-volume-level {
+            background-color: #00aaff;
+        }
+        
+        .player-controls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: space-between;
+            z-index: 101;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .video-container:hover .player-controls {
+            opacity: 1;
+        }
+        
+        .player-title {
+            color: white;
+            font-weight: bold;
+            padding: 5px 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 60%;
+        }
+        
+        .player-buttons a {
+            color: white;
+            text-decoration: none;
+            margin-left: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .playlist-container {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .playlist-section {
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            padding: 15px;
+            height: 500px;
+            overflow-y: auto;
+        }
+        
+        .playlist-section h3 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .video-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background-color: #333;
+            border-radius: 4px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .video-item:hover {
+            background-color: #444;
+        }
+        
+        .video-item.bg-primary {
+            background-color: #0d6efd !important;
+            transition: background-color 0.5s ease;
+        }
+        
+        .video-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+        
+        .video-item img {
+            width: 80px;
+            height: 45px;
+            object-fit: cover;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+        
+        .video-item .title {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        
+        .video-item .actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .video-item .actions button {
+            padding: 2px 5px;
+            background: transparent;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+        }
+        
+        .search-container {
+            margin-bottom: 15px;
+        }
+        
+        .search-container input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background-color: #2a2a2a;
+            color: #fff;
+        }
+        
+        .drop-placeholder {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            height: 60px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .fullscreen-button {
+            position: absolute;
+            right: 15px;
+            bottom: 15px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .video-container:hover .fullscreen-button {
+            opacity: 1;
+        }
+        
+        .playlist-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .playlist-info {
+            flex-grow: 1;
+        }
+        
+        .playlist-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        /* Crossfade controls */
+        .crossfade-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            background-color: rgba(0,0,0,0.2);
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+        
+        .crossfade-controls .form-check {
+            margin-right: 15px;
+        }
+        
+        .crossfade-controls input[type="number"] {
+            width: 70px;
+            padding: 4px 8px;
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 4px;
+        }
+        
+        .crossfade-controls label {
+            margin-bottom: 0;
+            margin-right: 5px;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 992px) {
+            .playlist-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .crossfade-controls {
+                flex-wrap: wrap;
+            }
+        }
+        
+        /* Player container to manage multiple instances */
+        .players-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 1;
+        }
+        
+        .video-player-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transition: opacity 0.5s ease;
+        }
+        
+        /* Active player is on top */
+        .video-player-wrapper.active {
+            z-index: 2;
+            opacity: 1;
+        }
+        
+        /* Incoming player during crossfade */
+        .video-player-wrapper.incoming {
+            z-index: 3;
+        }
+
+        /* Make the big play button more visible */
+        .video-js .vjs-big-play-button {
+            font-size: 3em;
+            line-height: 1.5em;
+            height: 1.5em;
+            width: 3em;
+            border: 0.06666em solid #fff;
+            border-radius: 0.3em;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            padding: 0;
+            margin-left: -1.5em;
+            margin-top: -0.75em;
+            cursor: pointer;
+            opacity: 1;
+            background-color: rgba(43, 51, 63, 0.7);
+            z-index: 10;
+        }
+        
+        /* Removing scroll indicator CSS */
+        /* Hide Video.js controls completely */
+        .vjs-control-bar {
+            display: none !important;
+        }
+        
+        .vjs-matrix.video-js .vjs-control-bar,
+        .vjs-matrix.video-js:hover .vjs-control-bar {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+        
+        /* Hide big play button as well since we have our own controls */
+        .video-js .vjs-big-play-button {
+            display: none !important;
+        }
+        
+        /* Ensure we can scroll to playlist or other areas */
+        html, body {
+            height: auto !important;
+            overflow-y: visible !important;
+        }
+        
+        /* Video.js container */
+        .video-js {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16/9;
+            background-color: #000;
+        }
+        
+        /* Allow video container to be auto-sized */
+        .vjs-fluid {
+            padding-top: 56.25% !important;
+        }
+        
+        /* Hide the default Video.js controls completely */
+        .video-js .vjs-control-bar {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        
+        /* Hide the big play button */
+        .vjs-big-play-button, 
+        .video-js .vjs-big-play-button {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        
+        /* Hide all Video.js UI components */
+        .video-js .vjs-control,
+        .video-js .vjs-loading-spinner,
+        .video-js .vjs-text-track-display,
+        .video-js .vjs-poster {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        
+        /* Specific Video.js hidden components */
+        .vjs-modal-dialog,
+        .vjs-error-display {
+            display: none !important;
+        }
+        
+        /* Player wrapper styles */
+        .video-player-wrapper {
+            width: 100%;
+            margin-bottom: 20px;
+            position: relative;
+            display: none;
+        }
+        
+        .video-player-wrapper.active {
+            display: block;
+        }
+        
+        .video-player-wrapper.incoming {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 2;
+            opacity: 0;
+        }
+        
+        /* Player title and actions */
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .player-title {
+            font-size: 1.25rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            margin-right: 10px;
+        }
+        
+        .player-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        /* Playlist section */
+        .playlist-section {
+            margin-top: 30px;
+        }
+        
+        .playlist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .playlist-title {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .playlist-title i {
+            cursor: pointer;
+        }
+        
+        .playlist-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        /* Playlist grid */
+        .playlist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 15px;
+            padding-bottom: 20px;
+        }
+        
+        .playlist-item {
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+            cursor: pointer;
+            background: #1a1a1a;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .playlist-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .playlist-item.playing {
+            box-shadow: 0 0 0 2px #007bff, 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .playlist-item .thumbnail {
+            width: 100%;
+            position: relative;
+            aspect-ratio: 16/9;
+            background-color: #0d0d0d;
+            overflow: hidden;
+        }
+        
+        .playlist-item .thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        
+        .playlist-item:hover .thumbnail img {
+            transform: scale(1.05);
+        }
+        
+        .playlist-item .duration {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+        }
+        
+        .playlist-item .item-info {
+            padding: 10px;
+        }
+        
+        .playlist-item .title {
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            color: #f0f0f0;
+        }
+        
+        .playlist-item .item-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        
+        .video-action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .video-action-buttons button {
+            border: none;
+            background: transparent;
+            color: #a0a0a0;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+        
+        .video-action-buttons button:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .playlist-position {
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+        
+        /* Empty playlist message */
+        .empty-playlist {
+            text-align: center;
+            padding: 30px;
+            color: #a0a0a0;
+        }
+        
+        /* Playlist edit mode */
+        .playlist-edit-container {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .playlist-edit-container.active {
+            display: block;
+        }
+        
+        /* Save button styling */
+        #save-playlist-btn {
+            display: none;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        #save-playlist-btn:hover {
+            background-color: #0069d9;
+        }
+        
+        #save-playlist-btn.show {
+            display: inline-block;
+        }
+        
+        /* Alert styling */
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        .alert-success {
+            background-color: rgba(40, 167, 69, 0.2);
+            border: 1px solid rgba(40, 167, 69, 0.3);
+            color: #28a745;
+        }
+        
+        .alert-info {
+            background-color: rgba(23, 162, 184, 0.2);
+            border: 1px solid rgba(23, 162, 184, 0.3);
+            color: #17a2b8;
+        }
+        
+        /* Custom player controls */
+        .custom-player-controls {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 0 0 6px 6px;
+            margin-top: -5px;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .custom-player-buttons {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .custom-player-buttons button {
+            background: transparent;
+            border: none;
+            color: #fff;
+            margin-right: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+        
+        .custom-player-buttons button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .custom-player-buttons button i {
+            font-size: 24px;
+        }
+        
+        .custom-progress-container {
+            position: relative;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        
+        .custom-progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: #007bff;
+            border-radius: 3px;
+            width: 0%;
+        }
+        
+        .custom-progress-handle {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            margin-left: -7px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .custom-progress-container:hover .custom-progress-handle {
+            opacity: 1;
+        }
+        
+        .custom-time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        /* Player info section (moved from top of video) */
+        .player-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background-color: #1a1a1a;
+            border-radius: 6px 6px 0 0;
+            margin-top: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .player-info .player-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #fff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            margin-right: 15px;
+        }
+        
+        .player-info .player-buttons {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .player-info .player-buttons a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 1.25rem;
+            transition: color 0.2s;
+        }
+        
+        .player-info .player-buttons a:hover {
+            color: #fff;
+        }
+        
+        /* Update custom controls top margin since we now have player info above */
+        .custom-player-controls {
+            margin-top: 0;
+            border-radius: 0 0 6px 6px;
+        }
+        
+        .playlist-item .playlist-position {
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+        
+        /* Video item styles for playlist management */
+        .video-item {
+            border-radius: 6px;
+            background: #1f1f1f;
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            overflow: hidden;
+            padding-right: 10px;
+            position: relative;
+            cursor: grab;
+            transition: box-shadow 0.2s;
+        }
+        
+        .video-item:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .video-item.dragging {
+            opacity: 0.5;
+            box-shadow: 0 0 0 2px #007bff;
+        }
+        
+        .video-item img {
+            width: 100px;
+            height: 56px;
+            object-fit: cover;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        
+        /* Drag handle styling */
+        .video-item .drag-handle {
+            color: #666;
+            cursor: grab;
+            padding: 0 8px;
+            display: flex;
+            align-items: center;
+            height: 100%;
+            font-size: 18px;
+            opacity: 0.7;
+            transition: opacity 0.2s, color 0.2s;
+        }
+        
+        .video-item:hover .drag-handle {
+            opacity: 1;
+            color: #999;
+        }
+        
+        .video-item.dragging .drag-handle {
+            color: #007bff;
+        }
+        
+        .video-item .title {
+            flex: 1;
+            font-size: 0.9rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            margin-right: 10px;
+        }
+        
+        .video-item .actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .video-item .actions button {
+            background: transparent;
+            border: none;
+            color: #a0a0a0;
+            cursor: pointer;
+            padding: 5px;
+            transition: color 0.2s;
+        }
+        
+        .video-item .actions button:hover {
+            color: #fff;
+        }
+        
+        /* Drop placeholder styling */
+        .drop-placeholder {
+            background: rgba(0, 123, 255, 0.1);
+            border: 2px dashed #007bff;
+            border-radius: 6px;
+            color: #007bff;
+            padding: 15px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid p-0">
+        <!-- Video Player -->
+        <div class="video-container">
+            <!-- Players container - will hold multiple video.js instances -->
+            <div id="players-container" class="players-container">
+                {% if current_video %}
+                <div id="player-wrapper-current" class="video-player-wrapper active">
+                    <video 
+                        id="playlist-video"
+                        class="video-js vjs-matrix vjs-big-play-centered"
+                        controls="false"
+                        autoplay
+                        preload="auto"
+                        width="100%" 
+                        height="100%"
+                        poster="{{ current_video.thumbnail_url }}"
+                        data-video-id="{{ current_video.video_id }}"
+                        data-setup='{"controls": false, "autoplay": true, "preload": "auto", "playbackRates": [0.5, 0.75, 1, 1.25, 1.5, 2]}'
+                    >
+                        <source src="/download/{{ current_video.video_id }}" type="video/mp4">
+                        <p class="vjs-no-js">
+                            To view this video please enable JavaScript, and consider upgrading to a
+                            web browser that <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+                        </p>
+                    </video>
+                </div>
+                {% else %}
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                    <div class="text-center">
+                        <i class="bi bi-music-note-list" style="font-size: 4rem;"></i>
+                        <h3 class="mt-3">No videos in playlist</h3>
+                        <p>Add videos from the library to start playing</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Player Title and Actions moved below video -->
+        <div class="player-info">
+            <div class="player-title">{{ current_video.title if current_video else 'No video selected' }}</div>
+            <div class="player-buttons">
+                {% if current_video %}
+                <a href="/download/{{ current_video.video_id }}" title="Download this video"><i class="bi bi-download"></i></a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Custom Player Controls -->
+        <div class="custom-player-controls">
+            <div class="control-wrapper">
+                <div class="playback-controls">
+                    <button id="previous-button" title="Previous video" onclick="playPreviousVideo()">
+                        <i class="bi bi-skip-backward-fill"></i>
+                    </button>
+                    <button id="play-pause-button" title="Play/Pause" onclick="togglePlayPause()">
+                        <i class="bi bi-play-fill" id="play-icon"></i>
+                        <i class="bi bi-pause-fill" id="pause-icon" style="display:none;"></i>
+                    </button>
+                    <button id="next-button" title="Next video" onclick="playNextVideo()">
+                        <i class="bi bi-skip-forward-fill"></i>
+                    </button>
+                </div>
+                
+                <div class="progress-container" id="progress-container" onclick="seekVideo(event)">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                
+                <div class="time-display">
+                    <span id="current-time">0:00</span> / <span id="duration">0:00</span>
+                </div>
+                
+                <div class="playlist-tools">
+                    <button id="shuffle-button" title="Shuffle playlist" onclick="shufflePlaylist()">
+                        <i class="bi bi-shuffle"></i>
+                    </button>
+                    <button id="fullscreen-button" title="Toggle fullscreen" onclick="toggleFullscreen()">
+                        <i class="bi bi-fullscreen"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content below video -->
+        <div class="content-container">
+            <!-- Back Button - Moved below video -->
+            <div class="container mb-3">
+                <a href="/playlists" class="btn btn-dark">
+                    <i class="bi bi-arrow-left"></i> Back to Playlists
+                </a>
+            </div>
+            
+            <!-- Playlist Info -->
+            <div class="container">
+                <div class="playlist-controls">
+                    <div class="playlist-info">
+                        <h2>{{ playlist.name }}</h2>
+                        <p>{{ playlist.description }}</p>
+                    </div>
+                    <div class="playlist-actions">
+                        <button class="btn btn-outline-light" id="save-playlist">
+                            <i class="bi bi-save"></i> Save Changes
+                        </button>
+                        <button class="btn btn-outline-light" id="rename-playlist">
+                            <i class="bi bi-pencil"></i> Rename
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Crossfade Controls -->
+                <div class="crossfade-controls">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="enable-crossfade" checked>
+                        <label class="form-check-label" for="enable-crossfade">Enable Crossfade</label>
+                    </div>
+                    <div>
+                        <label for="fade-out-time">Fade Out:</label>
+                        <input type="number" id="fade-out-time" min="0.5" max="10" step="0.5" value="2.0" class="crossfade-input">
+                        <span>seconds</span>
+                    </div>
+                    <div>
+                        <label for="fade-in-time">Fade In:</label>
+                        <input type="number" id="fade-in-time" min="0.5" max="10" step="0.5" value="2.0" class="crossfade-input">
+                        <span>seconds</span>
+                    </div>
+                </div>
+                
+                <!-- Playlist Tables -->
+                <div class="playlist-container">
+                    <!-- Current Playlist -->
+                    <div class="playlist-section">
+                        <h3>Current Playlist</h3>
+                        <div id="current-playlist" class="playlist-items-container">
+                            {% if playlist_items|length > 0 %}
+                                {% for item in playlist_items %}
+                                <div class="video-item" 
+                                     data-id="{{ item.video.video_id }}" 
+                                     data-position="{{ item.position }}"
+                                     data-playlist-item-id="{{ item.id }}"
+                                     data-index="{{ loop.index0 }}"
+                                     {% if current_index == loop.index0 %}
+                                     data-current="true"
+                                     {% endif %}>
+                                    <img src="{{ item.video.thumbnail_url }}" alt="{{ item.video.title }}">
+                                    <div class="title">{{ item.video.title }}</div>
+                                    <div class="actions">
+                                        {% if current_index != loop.index0 %}
+                                        <button title="Play" onclick="playVideo('{{ item.video.video_id }}', event)">
+                                            <i class="bi bi-play-fill"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button title="Remove" onclick="removeFromPlaylist(this.closest('.video-item').dataset.id)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <p class="text-center text-muted">No videos in this playlist</p>
+                                    <p class="text-center">Drag videos from the library to add them</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Library -->
+                    <div class="playlist-section">
+                        <h3>Library</h3>
+                        <div class="search-container">
+                            <input type="text" id="library-search" placeholder="Search your videos...">
+                        </div>
+                        <div id="library-videos" class="playlist-items-container">
+                            {% for video in library_videos %}
+                                {% if video.downloaded %}
+                                <div class="video-item" 
+                                     data-id="{{ video.video_id }}" 
+                                     data-title="{{ video.title }}"
+                                     data-thumbnail="{{ video.thumbnail_url }}">
+                                    <img src="{{ video.thumbnail_url }}" alt="{{ video.title }}">
+                                    <div class="title">{{ video.title }}</div>
+                                    <div class="actions">
+                                        <button title="Add to playlist" onclick="addToPlaylist(this)">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Video.js -->
+    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+    <script>
+        // Elements
+        const currentPlaylist = document.getElementById('current-playlist');
+        const libraryVideos = document.getElementById('library-videos');
+        const librarySearch = document.getElementById('library-search');
+        const saveButton = document.getElementById('save-playlist');
+        const renameButton = document.getElementById('rename-playlist');
+        let videoPlayer = null;
+        
+        // Store playlist changes
+        let playlistChanges = {
+            added: [],
+            removed: [],
+            reordered: false
+        };
+        
+        // Current playlist ID and index
+        const playlistId = {% if playlist %}{{ playlist.id }}{% else %}0{% endif %};
+        let currentPlaylistIndex = {% if current_index is defined %}{{ current_index }}{% else %}0{% endif %};
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Current playlist ID:", playlistId);
+            console.log("Current index:", currentPlaylistIndex);
+            
+            // Process the playlist items already rendered by Jinja
+            const existingItems = document.querySelectorAll('#current-playlist .video-item');
+            if (existingItems && existingItems.length > 0) {
+                // Update play buttons to use our enhanced function
+                existingItems.forEach(item => {
+                    const playButton = item.querySelector('.actions button[title="Play"]');
+                    if (playButton) {
+                        const videoId = item.dataset.id;
+                        playButton.setAttribute('onclick', `playVideo('${videoId}', event)`);
+                    }
+                });
+                
+                // Highlight the current video if any
+                const currentItem = document.querySelector('#current-playlist .video-item[data-current="true"]');
+                if (currentItem) {
+                    highlightCurrentVideo();
+                }
+            }
+        });
+        
+        // Drag and Drop functionality
+        let draggedItem = null;
+        
+        // Global player vars
+        let activePlayerId = 'current-player';
+        let playerCounter = 0;
+        let isTransitioning = false;
+        let nextVideoInfo = null;
+        let lastScrollPosition = 0;  // Track scroll position globally
+        
+        // Crossfade settings
+        let crossfadeSettings = {
+            enabled: true,
+            fadeOutTime: 2.0, // seconds
+            fadeInTime: 2.0 // seconds
+        };
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Store initial scroll position
+            lastScrollPosition = window.scrollY;
+            
+            setupDragAndDrop();
+            setupSearch();
+            setupButtons();
+            setupVideoPlayer();
+            setupCrossfadeControls();
+            setupScrollPrevention();
+            setupCustomControls();
+            
+            // Re-initialize custom controls when the player changes
+            document.addEventListener('player-ready', function() {
+                setupCustomControls();
+            });
+            
+            // Prevent scroll on all video-related events
+            window.addEventListener('scroll', function() {
+                // Only prevent scrolling during transitions
+                if (isTransitioning) {
+                    window.scrollTo(0, lastScrollPosition);
+                } else {
+                    // Update the stored position when user manually scrolls
+                    lastScrollPosition = window.scrollY;
+                }
+            });
+            
+            initializePlaylist();
+        });
+        
+        // Dispatch a custom event when the player is ready
+        function dispatchPlayerReadyEvent() {
+            const event = new CustomEvent('player-ready');
+            document.dispatchEvent(event);
+        }
+        
+        // Setup custom player controls
+        function setupCustomControls() {
+            console.log("Setting up custom controls");
+            if (!videoPlayer) {
+                console.warn("Video player not initialized yet");
+                return;
+            }
+            
+            const playPauseButton = document.getElementById('play-pause-button');
+            const previousButton = document.getElementById('previous-button');
+            const nextButton = document.getElementById('next-button');
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const currentTimeEl = document.getElementById('current-time');
+            const durationEl = document.getElementById('duration');
+            const shuffleButton = document.getElementById('shuffle-button');
+            const fullscreenButton = document.getElementById('fullscreen-button');
+            const playIcon = document.getElementById('play-icon');
+            const pauseIcon = document.getElementById('pause-icon');
+            
+            console.log("Control elements:", {
+                playPauseButton, previousButton, nextButton, progressContainer, 
+                shuffleButton, fullscreenButton
+            });
+            
+            // Remove any existing event listeners to avoid duplicates
+            playPauseButton.removeEventListener('click', handlePlayPause);
+            previousButton.removeEventListener('click', handlePrevious);
+            nextButton.removeEventListener('click', handleNext);
+            progressContainer.removeEventListener('click', handleSeek);
+            shuffleButton.removeEventListener('click', handleShuffle);
+            fullscreenButton.removeEventListener('click', handleFullscreen);
+            
+            // Define handler functions
+            function handlePlayPause() {
+                console.log("Play/Pause clicked");
+                if (videoPlayer.paused()) {
+                    videoPlayer.play().then(() => {
+                        console.log("Started playing");
+                        updatePlayPauseIcon();
+                    }).catch(e => {
+                        console.error("Error playing:", e);
+                    });
+                } else {
+                    videoPlayer.pause();
+                    console.log("Paused");
+                    updatePlayPauseIcon();
+                }
+            }
+            
+            function handlePrevious() {
+                console.log("Previous button clicked");
+                // Get current index and calculate previous index
+                const playlistItems = Array.from(document.querySelectorAll('#current-playlist .video-item'));
+                
+                if (playlistItems.length === 0) return;
+                
+                const prevIndex = (currentPlaylistIndex - 1 + playlistItems.length) % playlistItems.length;
+                const prevItem = playlistItems[prevIndex];
+                const prevVideoId = prevItem.dataset.id;
+                
+                // Use loadVideoWithCrossfade directly with index
+                loadVideoWithCrossfade(prevVideoId, prevIndex);
+            }
+            
+            function handleNext() {
+                console.log("Next button clicked");
+                // Get current index and calculate next index
+                const playlistItems = Array.from(document.querySelectorAll('#current-playlist .video-item'));
+                
+                if (playlistItems.length === 0) return;
+                
+                const nextIndex = (currentPlaylistIndex + 1) % playlistItems.length;
+                const nextItem = playlistItems[nextIndex];
+                const nextVideoId = nextItem.dataset.id;
+                
+                // Use loadVideoWithCrossfade directly with index
+                loadVideoWithCrossfade(nextVideoId, nextIndex);
+            }
+            
+            function handleSeek(e) {
+                if (!videoPlayer) return;
+                console.log("Seek bar clicked");
+                
+                const rect = progressContainer.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                const duration = videoPlayer.duration();
+                
+                console.log(`Seeking to position ${pos}, time: ${duration * pos}s`);
+                
+                if (duration > 0) {
+                    videoPlayer.currentTime(duration * pos);
+                    // Update progress bar immediately for visual feedback
+                    progressBar.style.width = `${pos * 100}%`;
+                }
+            }
+            
+            function handleShuffle() {
+                console.log("Shuffle button clicked");
+                shufflePlaylist();
+            }
+            
+            function handleFullscreen() {
+                console.log("Fullscreen button clicked");
+                if (videoPlayer.isFullscreen()) {
+                    videoPlayer.exitFullscreen();
+                } else {
+                    videoPlayer.requestFullscreen();
+                }
+            }
+            
+            // Add event listeners
+            playPauseButton.addEventListener('click', handlePlayPause);
+            previousButton.addEventListener('click', handlePrevious);
+            nextButton.addEventListener('click', handleNext);
+            progressContainer.addEventListener('click', handleSeek);
+            shuffleButton.addEventListener('click', handleShuffle);
+            fullscreenButton.addEventListener('click', handleFullscreen);
+            
+            // Update play/pause icon based on player state
+            function updatePlayPauseIcon() {
+                if (videoPlayer.paused()) {
+                    playIcon.style.display = '';
+                    pauseIcon.style.display = 'none';
+                } else {
+                    playIcon.style.display = 'none';
+                    pauseIcon.style.display = '';
+                }
+            }
+            
+            // Update progress bar and time display
+            function updateProgress() {
+                if (!videoPlayer) return;
+                
+                const currentTime = videoPlayer.currentTime();
+                const duration = videoPlayer.duration();
+                
+                if (duration > 0) {
+                    // Update progress bar
+                    const percentage = (currentTime / duration) * 100;
+                    progressBar.style.width = `${percentage}%`;
+                    
+                    // Update time display
+                    currentTimeEl.textContent = formatTime(currentTime);
+                    durationEl.textContent = formatTime(duration);
+                }
+            }
+            
+            // Update controls when player state changes
+            videoPlayer.off('play', updatePlayPauseIcon);
+            videoPlayer.off('pause', updatePlayPauseIcon);
+            videoPlayer.off('timeupdate', updateProgress);
+            
+            videoPlayer.on('play', updatePlayPauseIcon);
+            videoPlayer.on('pause', updatePlayPauseIcon);
+            videoPlayer.on('timeupdate', updateProgress);
+            
+            // Initial update
+            updatePlayPauseIcon();
+            updateProgress();
+            
+            console.log("Custom controls initialized successfully");
+        }
+        
+        // Prevent unwanted scrolling
+        function setupScrollPrevention() {
+            // When a video loads, remember scroll position
+            const preventScrollReset = () => {
+                const currentScroll = window.scrollY;
+                // Allow normal scrolling but prevent automatic browser scroll adjustments
+                setTimeout(() => {
+                    window.scrollTo(0, currentScroll);
+                }, 10);
+            };
+            
+            // Listen for events that might cause scrolling
+            window.addEventListener('resize', preventScrollReset);
+            
+            // For video.js specific events
+            if (videoPlayer) {
+                videoPlayer.on('loadstart', preventScrollReset);
+                videoPlayer.on('loadeddata', preventScrollReset);
+                videoPlayer.on('play', preventScrollReset);
+                videoPlayer.on('pause', preventScrollReset);
+                videoPlayer.on('seeking', preventScrollReset);
+                videoPlayer.on('seeked', preventScrollReset);
+                videoPlayer.on('volumechange', preventScrollReset);
+            }
+        }
+        
+        // Setup crossfade controls
+        function setupCrossfadeControls() {
+            const enableCrossfade = document.getElementById('enable-crossfade');
+            const fadeOutTime = document.getElementById('fade-out-time');
+            const fadeInTime = document.getElementById('fade-in-time');
+            
+            // Initialize with stored values or defaults
+            const savedSettings = localStorage.getItem('crossfadeSettings');
+            if (savedSettings) {
+                try {
+                    const parsed = JSON.parse(savedSettings);
+                    crossfadeSettings = parsed;
+                    
+                    // Update UI
+                    enableCrossfade.checked = parsed.enabled;
+                    fadeOutTime.value = parsed.fadeOutTime;
+                    fadeInTime.value = parsed.fadeInTime;
+                } catch (e) {
+                    console.error('Error loading crossfade settings', e);
+                }
+            }
+            
+            // Event listeners
+            enableCrossfade.addEventListener('change', function() {
+                crossfadeSettings.enabled = this.checked;
+                saveSettings();
+            });
+            
+            fadeOutTime.addEventListener('change', function() {
+                crossfadeSettings.fadeOutTime = parseFloat(this.value);
+                saveSettings();
+            });
+            
+            fadeInTime.addEventListener('change', function() {
+                crossfadeSettings.fadeInTime = parseFloat(this.value);
+                saveSettings();
+            });
+            
+            function saveSettings() {
+                localStorage.setItem('crossfadeSettings', JSON.stringify(crossfadeSettings));
+            }
+        }
+        
+        // Setup Video.js player for the initial video
+        function setupVideoPlayer() {
+            {% if current_video %}
+            // Save initial scroll position
+            const initialScrollPosition = window.scrollY;
+            
+            // Initialize the main player with explicit options
+            videoPlayer = videojs('playlist-video', {
+                autoplay: true,
+                controls: false,
+                fluid: false,
+                responsive: true,
+                preload: "auto",
+                playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
+                controlBar: {
+                    children: []  // Remove the control bar entirely
+                }
+            });
+            
+            // Force play on ready with console logging
+            videoPlayer.ready(function() {
+                console.log("Player is ready, attempting play");
+                
+                // Ensure controls are hidden
+                videoPlayer.controls(false);
+                
+                // Restore scroll position
+                window.scrollTo(0, initialScrollPosition);
+                
+                // Try to play automatically
+                videoPlayer.play().catch(e => {
+                    console.warn('Autoplay prevented:', e);
+                    // Make play button very visible
+                    document.querySelector('.vjs-big-play-button').style.display = 'block';
+                    document.querySelector('.vjs-big-play-button').style.opacity = '1';
+                    document.querySelector('.vjs-big-play-button').style.zIndex = '2000';
+                });
+                
+                // Preload next video immediately
+                preloadNextVideo();
+                
+                // Trigger custom event to set up controls
+                dispatchPlayerReadyEvent();
+            });
+            
+            // Handle end of video - play next
+            videoPlayer.on('ended', function() {
+                // Get current index and calculate next index
+                const playlistItems = Array.from(document.querySelectorAll('#current-playlist .video-item'));
+                
+                if (playlistItems.length === 0) return;
+                
+                const nextIndex = (currentPlaylistIndex + 1) % playlistItems.length;
+                
+                // Get the next item and its video ID
+                const nextItem = playlistItems[nextIndex];
+                const nextVideoId = nextItem.dataset.id;
+                
+                // Use loadVideoWithCrossfade with index
+                loadVideoWithCrossfade(nextVideoId, nextIndex);
+            });
+            
+            // Watch for time updates to check for preloading and crossfade
+            videoPlayer.on('timeupdate', checkCrossfadeStart);
+            
+            // Also update our custom control progress bar
+            videoPlayer.on('timeupdate', function() {
+                const progressBar = document.getElementById('progress-bar');
+                const currentTimeEl = document.getElementById('current-time');
+                const durationEl = document.getElementById('duration');
+                
+                if (progressBar && currentTimeEl && durationEl) {
+                    const duration = videoPlayer.duration();
+                    const currentTime = videoPlayer.currentTime();
+                    
+                    if (duration > 0) {
+                        // Update progress bar with direct style manipulation for better performance
+                        const percentage = (currentTime / duration) * 100;
+                        progressBar.style.width = `${percentage}%`;
+                        
+                        // Update time display
+                        currentTimeEl.textContent = formatTime(currentTime);
+                        durationEl.textContent = formatTime(duration);
+                    }
+                }
+            });
+            
+            // Also update the play/pause icon when the player state changes
+            videoPlayer.on('play', function() {
+                const playIcon = document.getElementById('play-icon');
+                const pauseIcon = document.getElementById('pause-icon');
+                if (playIcon && pauseIcon) {
+                    playIcon.style.display = 'none';
+                    pauseIcon.style.display = '';
+                }
+            });
+            
+            videoPlayer.on('pause', function() {
+                const playIcon = document.getElementById('play-icon');
+                const pauseIcon = document.getElementById('pause-icon');
+                if (playIcon && pauseIcon) {
+                    playIcon.style.display = '';
+                    pauseIcon.style.display = 'none';
+                }
+            });
+            
+            // Handle seeking specifically
+            videoPlayer.on('seeking', function() {
+                // If user seeks to near the end, make sure next video is preloaded
+                const currentTime = videoPlayer.currentTime();
+                const duration = videoPlayer.duration();
+                
+                if (duration - currentTime <= crossfadeSettings.fadeOutTime + 1) {
+                    // Make sure we have the next video ready
+                    if (!nextVideoInfo) {
+                        preloadNextVideo();
+                    }
+                    
+                    // If we're within fadeout range and not already transitioning, start crossfade
+                    if (duration - currentTime <= crossfadeSettings.fadeOutTime && !isTransitioning && nextVideoInfo) {
+                        startCrossfade();
+                    }
+                }
+            });
+            
+            // Set up fullscreen toggle button
+            document.getElementById('fullscreen-toggle').addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                if (videoPlayer.isFullscreen()) {
+                    videoPlayer.exitFullscreen();
+                } else {
+                    videoPlayer.requestFullscreen();
+                }
+            });
+            
+            // Debug logging for video element
+            console.log("Video element:", document.getElementById('playlist-video'));
+            
+            // Error handling
+            videoPlayer.on('error', function() {
+                console.error('Video error detected:', videoPlayer.error());
+                // Try to recover by retrying once
+                setTimeout(() => {
+                    videoPlayer.load();
+                    videoPlayer.play().catch(e => console.warn('Could not auto-play after error recovery', e));
+                }, 1000);
+            });
+            
+            // Set active player ID for tracking
+            activePlayerId = 'playlist-video';
+            {% endif %}
+        }
+        
+        // Check if it's time to start crossfade
+        function checkCrossfadeStart() {
+            if (!videoPlayer || !crossfadeSettings.enabled || isTransitioning) return;
+            
+            const currentTime = videoPlayer.currentTime();
+            const duration = videoPlayer.duration();
+            
+            // If video has no duration, skip
+            if (!duration || isNaN(duration)) return;
+            
+            // If the next video isn't preloaded yet, do it now
+            if (!nextVideoInfo) {
+                // We only need to check this once
+                preloadNextVideo();
+            }
+            
+            // If we're within the fadeOutTime of the end, start the crossfade
+            if (duration - currentTime <= crossfadeSettings.fadeOutTime && !isTransitioning && nextVideoInfo) {
+                startCrossfade();
+            }
+        }
+        
+        // Preload information about the next video
+        function preloadNextVideo(videoId = null) {
+            const currentVideoId = videoId || '{{ current_video.video_id if current_video else "" }}';
+            const playlistItems = Array.from(document.querySelectorAll('#current-playlist .video-item'));
+            
+            if (playlistItems.length > 0 && currentVideoId) {
+                const currentIndex = playlistItems.findIndex(item => 
+                    item.dataset.id === currentVideoId
+                );
+                
+                if (currentIndex !== -1 && currentIndex < playlistItems.length - 1) {
+                    // Get the next video
+                    const nextItem = playlistItems[currentIndex + 1];
+                    const nextVideoId = nextItem.dataset.id;
+                    
+                    // Fetch video details
+                    fetch(`/api/video/${nextVideoId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Store next video info for crossfade
+                                nextVideoInfo = {
+                                    videoId: nextVideoId,
+                                    title: data.video.title,
+                                    poster: data.video.thumbnail_url
+                                };
+                                console.log(`Preloaded next video info: ${data.video.title}`);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error preloading next video:', error);
+                        });
+                }
+            }
+        }
+        
+        // Start the crossfade process with a new player
+        function startCrossfade() {
+            if (!nextVideoInfo || isTransitioning) return;
+            
+            // Remember scroll position before any DOM changes
+            const startScrollY = window.scrollY;
+            lastScrollPosition = startScrollY;
+            
+            // Set transition lock
+            isTransitioning = true;
+            console.log('Starting crossfade with video ID:', nextVideoInfo.videoId);
+            console.log('Preserving scroll position:', startScrollY);
+            
+            // Force scroll position maintenance
+            document.body.style.overflow = 'hidden';
+            
+            // Create a unique ID for the new player
+            playerCounter++;
+            const newPlayerId = `player-${playerCounter}`;
+            const newWrapperClass = `player-wrapper-${playerCounter}`;
+            
+            // Force scroll position before DOM changes
+            window.scrollTo(0, startScrollY);
+            
+            // Create a new player wrapper and video element
+            const playersContainer = document.getElementById('players-container');
+            const playerWrapper = document.createElement('div');
+            playerWrapper.id = newWrapperClass;
+            playerWrapper.className = 'video-player-wrapper incoming';
+            playerWrapper.style.opacity = '0';
+            
+            const videoElement = document.createElement('video');
+            videoElement.id = newPlayerId;
+            videoElement.className = 'video-js vjs-matrix vjs-big-play-centered';
+            videoElement.controls = true;
+            videoElement.autoplay = true;
+            videoElement.preload = 'auto';
+            videoElement.poster = nextVideoInfo.poster;
+            videoElement.setAttribute('data-video-id', nextVideoInfo.videoId);
+            videoElement.setAttribute('playsinline', '');
+            videoElement.setAttribute('webkit-playsinline', '');
+            
+            const sourceElement = document.createElement('source');
+            sourceElement.src = `/download/${nextVideoInfo.videoId}`;
+            sourceElement.type = 'video/mp4';
+            
+            videoElement.appendChild(sourceElement);
+            playerWrapper.appendChild(videoElement);
+            playersContainer.appendChild(playerWrapper);
+            
+            // Restore scroll position immediately after DOM changes
+            window.scrollTo(0, startScrollY);
+            
+            // Initialize the new player
+            const newPlayer = videojs(newPlayerId, {
+                autoplay: true,
+                fluid: false,
+                responsive: true,
+                preload: "auto",
+                muted: true, // Start muted
+                playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
+                controls: false, // Ensure controls are completely disabled
+                bigPlayButton: false, // Disable big play button
+                controlBar: false, // Disable control bar entirely
+                html5: {
+                    vhs: {
+                        overrideNative: true
+                    },
+                    nativeAudioTracks: false,
+                    nativeVideoTracks: false
+                }
+            });
+            
+            // Ensure scroll position is maintained after player init
+            window.scrollTo(0, startScrollY);
+            
+            // When the new player is ready...
+            newPlayer.ready(function() {
+                console.log('New player ready, setting up autoplay for video ID:', nextVideoInfo.videoId);
+                // Make sure the data-video-id is accessible from the video.js player
+                newPlayer.el().dataset.videoId = nextVideoInfo.videoId;
+                
+                // Store current playback rate and use it for the new player
+                const currentRate = videoPlayer.playbackRate();
+                newPlayer.playbackRate(currentRate);
+                
+                // Force load
+                newPlayer.load();
+                
+                // Force the player to muted state to help with autoplay
+                newPlayer.muted(true);
+                
+                // Make sure the video element has the needed properties 
+                const videoEl = newPlayer.el().querySelector('video');
+                if (videoEl) {
+                    videoEl.muted = true;
+                    videoEl.setAttribute('autoplay', '');
+                    videoEl.setAttribute('playsinline', '');
+                    // Ensure data-video-id is on the actual video element too
+                    videoEl.setAttribute('data-video-id', nextVideoInfo.videoId);
+                }
+                
+                // Force scroll position after player setup
+                window.scrollTo(0, startScrollY);
+                
+                // Attempt to play with multiple fallbacks
+                setTimeout(() => {
+                    console.log('Attempting to play the next video');
+                    const playPromise = newPlayer.play();
+                    
+                    // Maintain scroll position during play attempt
+                    window.scrollTo(0, startScrollY);
+                    
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            console.log('New player started successfully');
+                            // Maintain scroll position before crossfade
+                            window.scrollTo(0, startScrollY);
+                            executeCrossfade(videoPlayer, newPlayer, playerWrapper);
+                        }).catch(e => {
+                            console.error('Error playing new video:', e);
+                            console.log('Trying alternative play method...');
+                            
+                            // Maintain scroll position on error
+                            window.scrollTo(0, startScrollY);
+                            
+                            // Try alternative play method
+                            setTimeout(() => {
+                                newPlayer.play().catch(e2 => {
+                                    console.error('Second play attempt also failed:', e2);
+                                    console.log('Falling back to navigation');
+                                    
+                                    // Reset transition state before navigating
+                                    isTransitioning = false;
+                                    document.body.style.overflow = '';
+                                    
+                                    window.location.href = `/playlist/${playlistId}/play/${nextVideoInfo.videoId}`;
+                                });
+                            }, 500);
+                        });
+                    } else {
+                        console.log('Play promise undefined, assuming playback started');
+                        // Maintain scroll position before crossfade
+                        window.scrollTo(0, startScrollY);
+                        executeCrossfade(videoPlayer, newPlayer, playerWrapper);
+                    }
+                }, 200);
+            });
+            
+            // Add error handler to new player
+            newPlayer.on('error', function() {
+                console.error('Error in new player during crossfade');
+                isTransitioning = false;
+                document.body.style.overflow = '';
+                
+                // Clean up on failure
+                if (playerWrapper.parentNode) {
+                    playerWrapper.parentNode.removeChild(playerWrapper);
+                }
+                newPlayer.dispose();
+                nextVideoInfo = null;
+            });
+        }
+        
+        // Execute the actual crossfade between two players
+        function executeCrossfade(oldPlayer, newPlayer, newPlayerWrapper) {
+            // Get crossfade durations
+            const fadeOutDuration = crossfadeSettings.fadeOutTime;
+            const fadeInDuration = crossfadeSettings.fadeInTime;
+            
+            // Start time for animation
+            const startTime = Date.now();
+            
+            // Get current volume to restore later
+            const currentVolume = oldPlayer.volume();
+            
+            // Animation function
+            function animate() {
+                const elapsed = (Date.now() - startTime) / 1000;
+                
+                // Calculate fade amounts (0-1)
+                const fadeOutAmount = Math.min(elapsed / fadeOutDuration, 1);
+                const fadeInAmount = Math.min(elapsed / fadeInDuration, 1);
+                
+                // Update first video volume (fade out)
+                oldPlayer.volume(currentVolume * (1 - fadeOutAmount));
+                
+                // Update second video volume and opacity (fade in)
+                newPlayer.volume(currentVolume * fadeInAmount);
+                newPlayer.muted(false); // Unmute as we increase volume
+                newPlayerWrapper.style.opacity = fadeInAmount;
+                
+                // Continue animation if not complete
+                if (fadeOutAmount < 1 || fadeInAmount < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Animation complete, finalize the transition
+                    finalizeCrossfade(oldPlayer, newPlayer, newPlayerWrapper);
+                }
+            }
+            
+            // Start the animation
+            requestAnimationFrame(animate);
+        }
+        
+        // Finalize the crossfade by making the new player active and updating UI
+        function finalizeCrossfade(oldPlayer, newPlayer, newPlayerWrapper) {
+            console.log('Crossfade complete, finalizing transition');
+            
+            // Store scroll position before manipulating DOM
+            lastScrollPosition = window.scrollY;
+            console.log('Saving scroll position:', lastScrollPosition);
+            
+            // Create a stronger scroll lock for the critical section
+            const originalScrollY = window.scrollY;
+            document.body.style.overflow = 'hidden';
+            document.body.style.height = '100%';
+            
+            // Force position maintenance
+            window.scrollTo(0, originalScrollY);
+            
+            // Set global scroll lock
+            window.scrollLock = true;
+            
+            // Create a scroll lock function that will restore position
+            const maintainScrollPosition = () => {
+                window.scrollTo(0, originalScrollY);
+            };
+            
+            // Continuously maintain scroll position during transition
+            const scrollInterval = setInterval(maintainScrollPosition, 20);
+            
+            // Add additional scroll prevention
+            const preventScroll = (e) => {
+                if (window.scrollLock) {
+                    window.scrollTo(0, originalScrollY);
+                    e.preventDefault();
+                }
+            };
+            
+            // Add all possible scroll event listeners
+            window.addEventListener('scroll', preventScroll, { passive: false });
+            document.addEventListener('wheel', preventScroll, { passive: false });
+            document.addEventListener('touchmove', preventScroll, { passive: false });
+            
+            // Store the active player references
+            const oldPlayerId = activePlayerId;
+            const oldPlayerWrapper = document.querySelector(`.video-player-wrapper.active`);
+            
+            // Store the current video info before we reset nextVideoInfo
+            const currentVideoInfo = {...nextVideoInfo};
+            
+            // Update player references
+            activePlayerId = newPlayer.id();
+            console.log('New active player ID:', activePlayerId);
+            videoPlayer = newPlayer;
+            
+            // Store video ID reference explicitly
+            const newVideoId = currentVideoInfo.videoId;
+            console.log('Setting explicit current video ID:', newVideoId);
+            
+            // Critical DOM manipulations - do them all at once to minimize layout shifts
+            setTimeout(() => {
+                // Force scroll position before manipulations
+                window.scrollTo(0, originalScrollY);
+                
+                // Update CSS classes
+                newPlayerWrapper.classList.remove('incoming');
+                newPlayerWrapper.classList.add('active');
+                
+                if (oldPlayerWrapper) {
+                    oldPlayerWrapper.classList.remove('active');
+                }
+                
+                // Update the title and download link
+                document.querySelector('.player-info .player-title').innerText = currentVideoInfo.title;
+                
+                const downloadLink = document.querySelector('.player-info .player-buttons a[title="Download this video"]');
+                if (downloadLink) {
+                    downloadLink.href = `/download/${newVideoId}`;
+                }
+                
+                // Update URL using index-based format instead of video ID format
+                // This is the key change to ensure we always use index URLs
+                updateURL(currentPlaylistIndex, `Playing ${currentVideoInfo.title}`);
+                
+                // Force scroll position after manipulations
+                window.scrollTo(0, originalScrollY);
+            }, 0);
+            
+            // Highlight the current video in the playlist
+            highlightCurrentVideo(newVideoId);
+            
+            // Update custom player controls
+            updateCustomControlState();
+            
+            // Force immediate progress update for the custom controls
+            const progressBar = document.getElementById('progress-bar');
+            const currentTimeEl = document.getElementById('current-time');
+            const durationEl = document.getElementById('duration');
+            
+            if (progressBar && currentTimeEl && durationEl) {
+                const updateCustomProgress = () => {
+                    const duration = videoPlayer.duration();
+                    const currentTime = videoPlayer.currentTime();
+                    
+                    if (duration > 0) {
+                        // Update progress bar
+                        const percentage = (currentTime / duration) * 100;
+                        progressBar.style.width = `${percentage}%`;
+                        
+                        // Update time display
+                        currentTimeEl.textContent = formatTime(currentTime);
+                        durationEl.textContent = formatTime(duration);
+                    }
+                };
+                
+                // Initial update and schedule another update after metadata loads
+                updateCustomProgress();
+                videoPlayer.one('loadedmetadata', updateCustomProgress);
+            }
+            
+            // Remove existing ended event listener if any
+            newPlayer.off('ended');
+            
+            // Add ended event to new player with better tracking
+            newPlayer.on('ended', function() {
+                console.log('Video ended event triggered on player:', newPlayer.id());
+                
+                // Get current index and calculate next index
+                const playlistItems = Array.from(document.querySelectorAll('#current-playlist .video-item'));
+                
+                if (playlistItems.length === 0) return;
+                
+                const nextIndex = (currentPlaylistIndex + 1) % playlistItems.length;
+                
+                // Get the next item and its video ID
+                const nextItem = playlistItems[nextIndex];
+                const nextVideoId = nextItem.dataset.id;
+                
+                // Use loadVideoWithCrossfade with index
+                loadVideoWithCrossfade(nextVideoId, nextIndex);
+            });
+            
+            // Add timeupdate for next crossfade
+            newPlayer.on('timeupdate', checkCrossfadeStart);
+            
+            // Also add timeupdate listener for custom progress bar with high frequency updates
+            newPlayer.on('timeupdate', function() {
+                const progressBar = document.getElementById('progress-bar');
+                const currentTimeEl = document.getElementById('current-time');
+                const durationEl = document.getElementById('duration');
+                
+                if (progressBar && currentTimeEl && durationEl) {
+                    const duration = videoPlayer.duration();
+                    const currentTime = videoPlayer.currentTime();
+                    
+                    if (duration > 0) {
+                        // Update progress bar with direct style manipulation for better performance
+                        const percentage = (currentTime / duration) * 100;
+                        progressBar.style.width = `${percentage}%`;
+                        
+                        // Only update text elements less frequently to avoid performance issues
+                        // Use mod 4 to update time display every 4th frame (still smooth)
+                        if (Math.floor(currentTime * 4) % 4 === 0) {
+                            currentTimeEl.textContent = formatTime(currentTime);
+                            durationEl.textContent = formatTime(duration);
+                        }
+                    }
+                }
+            });
+            
+            // Trigger the event to reinitialize controls with the new player
+            dispatchPlayerReadyEvent();
+            
+            // Dispose of the old player (after a short delay to ensure smooth transition)
+            setTimeout(() => {
+                // Force position before cleanup
+                window.scrollTo(0, originalScrollY);
+                
+                if (oldPlayer) {
+                    oldPlayer.pause();
+                    oldPlayer.dispose();
+                }
+                
+                // Remove the old wrapper
+                if (oldPlayerWrapper && oldPlayerWrapper.parentNode) {
+                    oldPlayerWrapper.parentNode.removeChild(oldPlayerWrapper);
+                }
+                
+                // Reset transition flags
+                isTransitioning = false;
+                
+                // Reset the nextVideoInfo to null *after* we've preloaded the next video
+                const videoIdToPreload = newVideoId;
+                nextVideoInfo = null;
+                
+                // Force position after cleanup
+                window.scrollTo(0, originalScrollY);
+                
+                // Preload the next video info for the new current video
+                preloadNextVideo(videoIdToPreload);
+            }, 50);
+            
+            // Release scroll prevention with delay to ensure everything is stable
+            setTimeout(() => {
+                // Clear intervals and remove event listeners
+                clearInterval(scrollInterval);
+                window.removeEventListener('scroll', preventScroll);
+                document.removeEventListener('wheel', preventScroll);
+                document.removeEventListener('touchmove', preventScroll);
+                
+                // Make absolutely sure the scroll lock is released
+                window.scrollLock = false;
+                
+                // Restore normal overflow behavior
+                document.body.style.overflow = '';
+                document.body.style.height = '';
+                
+                // Final position enforcement
+                window.scrollTo(0, originalScrollY);
+                
+                // Update global scroll position tracker
+                lastScrollPosition = originalScrollY;
+                
+                console.log('Scroll position restored and locks released');
+            }, 500);
+        }
+        
+        // Helper function to format time
+        function formatTime(seconds) {
+            seconds = Math.floor(seconds);
+            let minutes = Math.floor(seconds / 60);
+            seconds = seconds % 60;
+            return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+        
+        // Update custom player control state (play/pause button)
+        function updateCustomControlState() {
+            if (!videoPlayer) return;
+            
+            const playIcon = document.getElementById('play-icon');
+            const pauseIcon = document.getElementById('pause-icon');
+            
+            if (playIcon && pauseIcon) {
+                if (videoPlayer.paused()) {
+                    playIcon.style.display = '';
+                    pauseIcon.style.display = 'none';
+                } else {
+                    playIcon.style.display = 'none';
+                    pauseIcon.style.display = '';
+                }
+            }
+        }
+        
+        // Highlight the current video in the playlist
+        function highlightCurrentVideo(videoId) {
+            console.log('Highlighting video:', videoId);
+            
+            // First, reset all items to non-highlighted state
+            document.querySelectorAll('#current-playlist .video-item').forEach(item => {
+                item.classList.remove('playing');
+                item.classList.remove('bg-primary');
+                item.removeAttribute('data-current');
+                
+                // Show play button for all items
+                const playButton = item.querySelector('.actions button[title="Play"]');
+                if (playButton) {
+                    playButton.style.display = '';
+                }
+            });
+            
+            // Get all playlist items
+            const playlistItems = Array.from(document.querySelectorAll('#current-playlist .video-item'));
+            if (playlistItems.length > currentPlaylistIndex) {
+                const currentItem = playlistItems[currentPlaylistIndex];
+                
+                // Apply highlighting to the current item
+                currentItem.classList.add('playing');
+                currentItem.classList.add('bg-primary');
+                
+                // Hide play button only for the exact current item
+                const playButton = currentItem.querySelector('.actions button[title="Play"]');
+                if (playButton) {
+                    playButton.style.display = 'none';
+                }
+                
+                // Mark as current
+                currentItem.setAttribute('data-current', 'true');
+                
+                console.log('Successfully highlighted item at index:', currentPlaylistIndex);
+            } else {
+                console.warn(`No item found at index ${currentPlaylistIndex}`);
+            }
+        }
+        
+        // Play the next video in playlist
+        function playNextVideo() {
+            console.log('Play next video called');
+            
+            // Get all playlist items
+            const playlistItems = Array.from(document.querySelectorAll('#current-playlist .video-item'));
+            if (playlistItems.length === 0) {
+                console.warn('No videos in playlist');
+                return;
+            }
+            
+            // Calculate the next index (loop back to start if at end)
+            const nextIndex = (currentPlaylistIndex + 1) % playlistItems.length;
+            console.log('Next index:', nextIndex);
+            
+            // Get the next item and its video ID
+            const nextItem = playlistItems[nextIndex];
+            const nextVideoId = nextItem.dataset.id;
+            
+            // Play the next video using the index
+            console.log('Playing next video:', nextVideoId, 'at index', nextIndex);
+            loadVideoWithCrossfade(nextVideoId, nextIndex);
+        }
+        
+        // Play the previous video in playlist
+        function playPreviousVideo() {
+            console.log('Play previous video called');
+            
+            // Get all playlist items
+            const playlistItems = Array.from(document.querySelectorAll('#current-playlist .video-item'));
+            if (playlistItems.length === 0) {
+                console.warn('No videos in playlist');
+                return;
+            }
+            
+            // Calculate the previous index (loop back to end if at start)
+            const prevIndex = (currentPlaylistIndex - 1 + playlistItems.length) % playlistItems.length;
+            console.log('Previous index:', prevIndex);
+            
+            // Get the previous item and its video ID
+            const prevItem = playlistItems[prevIndex];
+            const prevVideoId = prevItem.dataset.id;
+            
+            // Play the previous video using the index
+            console.log('Playing previous video:', prevVideoId, 'at index', prevIndex);
+            loadVideoWithCrossfade(prevVideoId, prevIndex);
+        }
+        
+        // Play a video from the playlist (called from UI elements)
+        function playVideo(videoId, eventOrElement) {
+            console.log('Play video called with:', videoId);
+            
+            // Find the clicked item
+            let clickedItem;
+            
+            if (eventOrElement) {
+                // If an event was passed, get the target
+                if (eventOrElement.target || eventOrElement.currentTarget) {
+                    const clickedElement = eventOrElement.currentTarget || eventOrElement.target;
+                    clickedItem = clickedElement.closest('.video-item');
+                } 
+                // If a DOM element was passed directly
+                else if (eventOrElement.closest) {
+                    clickedItem = eventOrElement.closest('.video-item');
+                }
+                // If the element itself was passed
+                else if (eventOrElement.classList && eventOrElement.classList.contains('video-item')) {
+                    clickedItem = eventOrElement;
+                }
+            }
+            
+            // If we couldn't determine from the event, try to find by video ID
+            if (!clickedItem) {
+                // Find all items with this video ID
+                const matchingItems = document.querySelectorAll(`#current-playlist .video-item[data-id="${videoId}"]`);
+                
+                if (matchingItems.length > 0) {
+                    // Use the first matching item
+                    clickedItem = matchingItems[0];
+                    console.log('Using first matching item by video ID');
+                }
+            }
+            
+            if (clickedItem) {
+                const playlistItems = Array.from(document.querySelectorAll('#current-playlist .video-item'));
+                const clickedIndex = playlistItems.indexOf(clickedItem);
+                console.log(`Playing video ${videoId} from item at index ${clickedIndex}`);
+                
+                // Clear current markers and set new one
+                playlistItems.forEach(item => {
+                    item.removeAttribute('data-current');
+                });
+                clickedItem.setAttribute('data-current', 'true');
+                
+                // Make sure the current item is highlighted immediately (visual feedback)
+                playlistItems.forEach(item => {
+                    item.classList.remove('playing');
+                    item.classList.remove('bg-primary');
+                });
+                clickedItem.classList.add('playing');
+                clickedItem.classList.add('bg-primary');
+                
+                // Hide play button only for the current item
+                playlistItems.forEach(item => {
+                    const playBtn = item.querySelector('.actions button[title="Play"]');
+                    if (playBtn) playBtn.style.display = '';
+                });
+                const currentPlayBtn = clickedItem.querySelector('.actions button[title="Play"]');
+                if (currentPlayBtn) currentPlayBtn.style.display = 'none';
+                
+                // Use crossfade with index instead of video ID
+                loadVideoWithCrossfade(videoId, clickedIndex);
+            } else {
+                // Fallback to direct navigation if item not found
+                console.warn('Could not find clicked item, falling back to direct navigation');
+                window.location.href = `/playlist/${playlistId}/play/${videoId}`;
+            }
+        }
+        
+        // Update URL on navigation (properly handles index-based navigation)
+        function updateURL(index, title) {
+            console.log("Updating URL to index:", index);
+            // Use pushState to update URL without page reload
+            window.history.pushState(
+                {index: index}, 
+                title || "Playing video", 
+                `/playlist/${playlistId}/play/index/${index}`
+            );
+            // Update our tracking variable
+            currentPlaylistIndex = index;
+        }
+        
+        // Load a video with crossfade effect
+        function loadVideoWithCrossfade(videoId, itemIndex) {
+            // If no player or same video, do nothing
+            if (!videoPlayer || videoPlayer.el().querySelector('video').dataset.videoId === videoId) {
+                return;
+            }
+            
+            console.log(`Loading video ${videoId} with crossfade, at playlist index ${itemIndex}`);
+            
+            // Update our global index tracking
+            currentPlaylistIndex = itemIndex;
+            
+            // First, fetch the video info
+            fetch(`/api/video/${videoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Set nextVideoInfo for the crossfade mechanism
+                        nextVideoInfo = {
+                            videoId: videoId,
+                            title: data.video.title,
+                            poster: data.video.thumbnail_url
+                        };
+                        
+                        // Update URL without navigation - maintain history
+                        updateURL(itemIndex, `Playing ${data.video.title}`);
+                        
+                        // Highlight the correct item in the playlist
+                        highlightCurrentVideo(videoId);
+                        
+                        // Start the crossfade immediately
+                        startCrossfade();
+                    } else {
+                        console.error('Error fetching video info:', data.message);
+                        // Fallback to direct navigation
+                        window.location.href = `/playlist/${playlistId}/play/index/${itemIndex}`;
+                    }
+                });
+        }
+        
+        // Handle play/pause toggle
+        function togglePlayPause() {
+            console.log("Play/Pause clicked");
+            if (!videoPlayer) return;
+            
+            if (videoPlayer.paused()) {
+                videoPlayer.play().then(() => {
+                    console.log("Started playing");
+                    updatePlayPauseIcon();
+                }).catch(e => {
+                    console.error("Error playing:", e);
+                });
+            } else {
+                videoPlayer.pause();
+                console.log("Paused");
+                updatePlayPauseIcon();
+            }
+        }
+        
+        // Update play/pause button state
+        function updatePlayPauseIcon() {
+            if (!videoPlayer) return;
+            
+            const playIcon = document.getElementById('play-icon');
+            const pauseIcon = document.getElementById('pause-icon');
+            
+            if (playIcon && pauseIcon) {
+                if (videoPlayer.paused()) {
+                    playIcon.style.display = '';
+                    pauseIcon.style.display = 'none';
+                } else {
+                    playIcon.style.display = 'none';
+                    pauseIcon.style.display = '';
+                }
+            }
+        }
+        
+        // Handle seeking
+        function seekVideo(e) {
+            if (!videoPlayer) return;
+            console.log("Seek bar clicked");
+            
+            const progressContainer = document.getElementById('progress-container');
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            const duration = videoPlayer.duration();
+            
+            console.log(`Seeking to position ${pos}, time: ${duration * pos}s`);
+            
+            if (duration > 0) {
+                videoPlayer.currentTime(duration * pos);
+                // Update progress bar immediately for visual feedback
+                const progressBar = document.getElementById('progress-bar');
+                progressBar.style.width = `${pos * 100}%`;
+            }
+        }
+        
+        // Toggle fullscreen
+        function toggleFullscreen() {
+            console.log("Fullscreen button clicked");
+            if (!videoPlayer) return;
+            
+            if (videoPlayer.isFullscreen()) {
+                videoPlayer.exitFullscreen();
+            } else {
+                videoPlayer.requestFullscreen();
+            }
+        }
+        
+        // Auto-save playlist changes
+        function autoSavePlaylist() {
+            // Check if there are changes to save
+            if (playlistChanges.added.length > 0 || 
+                playlistChanges.removed.length > 0 || 
+                playlistChanges.reordered) {
+                
+                console.log("Auto-saving playlist changes:", playlistChanges);
+                
+                // Show save button
+                saveButton.classList.add('btn-primary');
+                saveButton.classList.remove('btn-outline-light');
+                
+                // Collect all current positions
+                const positions = {};
+                const items = Array.from(currentPlaylist.querySelectorAll('.video-item'));
+                
+                items.forEach((item, index) => {
+                    const id = item.dataset.playlistItemId;
+                    // Only include database items, not temp items
+                    if (id && !id.startsWith('temp_')) {
+                        positions[id] = index;
+                    }
+                });
+                
+                // Format the data for the API
+                const data = {
+                    added: playlistChanges.added.map(item => ({
+                        video_id: item.videoId,
+                        position: parseInt(item.position),
+                        temp_id: item.tempId
+                    })),
+                    removed: playlistChanges.removed,
+                    positions: positions
+                };
+                
+                console.log("Saving data:", JSON.stringify(data));
+                
+                // Send to the server
+                fetch(`/api/playlist/${playlistId}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => {
+                    console.log("Save response status:", response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Save response data:", data);
+                    
+                    if (data.success) {
+                        console.log("Playlist saved successfully");
+                        // Reset changes tracker
+                        playlistChanges = {
+                            added: [],
+                            removed: [],
+                            reordered: false
+                        };
+                        
+                        // Reset save button
+                        saveButton.classList.remove('btn-primary');
+                        saveButton.classList.add('btn-outline-light');
+                        
+                        // Update playlist item IDs with new ones from server if available
+                        if (data.newItems && data.newItems.length > 0) {
+                            console.log("Updating item IDs with:", data.newItems);
+                            data.newItems.forEach(newItem => {
+                                // Find the temp item by looking for the temp_id pattern
+                                const tempId = `temp_${newItem.video_id}_${newItem.temp_id}`;
+                                const tempItem = document.querySelector(`.video-item[data-playlist-item-id="${tempId}"]`);
+                                
+                                if (tempItem) {
+                                    console.log(`Updating item ${tempId} to permanent ID ${newItem.id}`);
+                                    tempItem.dataset.playlistItemId = newItem.id;
+                                }
+                            });
+                        }
+                    } else {
+                        console.error('Error saving playlist:', data.message);
+                        alert('Error saving playlist: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving playlist changes:', error);
+                    alert('Error saving playlist: Network or server error');
+                });
+            }
+        }
+        
+        // Setup drag and drop functionality
+        function setupDragAndDrop() {
+            const videoItems = document.querySelectorAll('.video-item');
+            
+            // Initialize all video items for drag and drop
+            videoItems.forEach(item => {
+                // Add drag handle if it doesn't exist
+                if (!item.querySelector('.drag-handle')) {
+                    const dragHandle = document.createElement('div');
+                    dragHandle.className = 'drag-handle';
+                    dragHandle.innerHTML = '<i class="bi bi-grip-vertical"></i>';
+                    item.insertBefore(dragHandle, item.firstChild);
+                }
+                
+                // Make items draggable
+                item.setAttribute('draggable', 'true');
+                
+                // Add drag start event
+                item.addEventListener('dragstart', handleDragStart);
+                
+                // Add drag end event
+                item.addEventListener('dragend', handleDragEnd);
+            });
+            
+            // Add event listeners to playlist container
+            if (currentPlaylist) {
+                currentPlaylist.addEventListener('dragover', handleDragOver);
+                currentPlaylist.addEventListener('dragenter', handleDragEnter);
+                currentPlaylist.addEventListener('dragleave', handleDragLeave);
+                currentPlaylist.addEventListener('drop', handleDrop);
+            }
+            
+            // Add event listeners to library container
+            if (libraryVideos) {
+                libraryVideos.addEventListener('dragover', handleDragOver);
+                libraryVideos.addEventListener('dragenter', handleDragEnter);
+                libraryVideos.addEventListener('dragleave', handleDragLeave);
+            }
+        }
+        
+        // Handle drag start event
+        function handleDragStart(e) {
+            draggedItem = this;
+            
+            // Set data for transfer - Fix for Firefox which needs text/plain
+            const dataToTransfer = {
+                videoId: this.dataset.id,
+                containerId: this.closest('.playlist-items-container').id,
+                itemId: this.dataset.playlistItemId || `temp_${this.dataset.id}_${Date.now()}`
+            };
+            
+            // Store item ID for unique identification regardless of video ID
+            if (!this.dataset.playlistItemId) {
+                this.dataset.playlistItemId = dataToTransfer.itemId;
+            }
+            
+            // Convert to string and set as data
+            const dataString = JSON.stringify(dataToTransfer);
+            e.dataTransfer.setData('text/plain', dataString);
+            e.dataTransfer.setData('application/json', dataString);
+            
+            console.log('Drag started with data:', dataString);
+            
+            // Add dragging class for visual feedback
+            setTimeout(() => {
+                this.classList.add('dragging');
+            }, 0);
+        }
+        
+        // Handle drag end event
+        function handleDragEnd(e) {
+            // Remove dragging class
+            this.classList.remove('dragging');
+            
+            // Remove any placeholder
+            const placeholder = document.querySelector('.drop-placeholder');
+            if (placeholder) {
+                placeholder.remove();
+            }
+        }
+        
+        // Handle drag over event
+        function handleDragOver(e) {
+            // Prevent default to allow drop
+            e.preventDefault();
+            
+            // Only proceed if this is the current playlist
+            if (this.id !== 'current-playlist') return;
+            
+            // Get pointer position
+            const y = e.clientY;
+            
+            // Find the placeholder or create it if it doesn't exist
+            let placeholder = document.querySelector('.drop-placeholder');
+            if (!placeholder) {
+                placeholder = document.createElement('div');
+                placeholder.className = 'drop-placeholder';
+                placeholder.textContent = 'Drop here';
+                this.appendChild(placeholder);
+            }
+            
+            // Find the item below which to insert the placeholder
+            const videoItems = Array.from(this.querySelectorAll('.video-item:not(.dragging)'));
+            const targetItem = videoItems.find(item => {
+                const box = item.getBoundingClientRect();
+                return y < box.top + box.height / 2;
+            });
+            
+            if (targetItem) {
+                this.insertBefore(placeholder, targetItem);
+            } else if (videoItems.length > 0) {
+                // If we're at the end, append after the last item
+                const lastItem = videoItems[videoItems.length - 1];
+                this.insertBefore(placeholder, lastItem.nextSibling);
+            }
+        }
+        
+        // Handle drag enter event
+        function handleDragEnter(e) {
+            // Add highlight class to indicate a valid drop target
+            this.classList.add('drag-over');
+        }
+        
+        // Handle drag leave event
+        function handleDragLeave(e) {
+            // Remove highlight class
+            this.classList.remove('drag-over');
+        }
+        
+        // Handle drop event
+        function handleDrop(e) {
+            // Prevent default action
+            e.preventDefault();
+            
+            // Remove highlight class
+            this.classList.remove('drag-over');
+            
+            // Only proceed if this is the current playlist
+            if (this.id !== 'current-playlist') return;
+            
+            // Get the transfer data
+            try {
+                // Try to get data from different formats
+                let dataString = e.dataTransfer.getData('application/json') || 
+                                e.dataTransfer.getData('text/plain');
+                
+                // If we couldn't get data but we have a draggedItem, use it
+                if (!dataString && draggedItem) {
+                    dataString = JSON.stringify({
+                        videoId: draggedItem.dataset.id,
+                        containerId: draggedItem.closest('.playlist-items-container').id,
+                        itemId: draggedItem.dataset.playlistItemId
+                    });
+                }
+                
+                if (!dataString) {
+                    console.error('No drag data available');
+                    return;
+                }
+                
+                console.log('Drop received with data:', dataString);
+                
+                const data = JSON.parse(dataString);
+                const videoId = data.videoId;
+                const sourceContainer = data.containerId;
+                const itemId = data.itemId;
+                
+                // Find the drop placeholder
+                const placeholder = document.querySelector('.drop-placeholder');
+                if (!placeholder) return;
+                
+                // Get the position where to insert the item
+                const items = Array.from(currentPlaylist.querySelectorAll('.video-item'));
+                const position = placeholder.previousElementSibling ? 
+                    items.indexOf(placeholder.previousElementSibling) + 1 : 0;
+                
+                // Handle based on source container
+                if (sourceContainer === 'library-videos') {
+                    // Add from library
+                    addVideoToPlaylist(videoId, position);
+                } else if (sourceContainer === 'current-playlist') {
+                    // Reorder existing item
+                    const sourceItem = document.querySelector(`.video-item[data-playlist-item-id="${itemId}"]`);
+                    if (!sourceItem) return;
+                    
+                    // Insert at the new position
+                    currentPlaylist.insertBefore(sourceItem, placeholder);
+                    
+                    // Mark as reordered for saving
+                    playlistChanges.reordered = true;
+                    
+                    // Auto-save changes
+                    autoSavePlaylist();
+                }
+                
+                // Remove the placeholder
+                placeholder.remove();
+                
+            } catch (error) {
+                console.error('Error processing drag and drop data:', error);
+                // Backup approach - use draggedItem directly
+                if (draggedItem) {
+                    const sourceContainer = draggedItem.closest('.playlist-items-container').id;
+                    
+                    // Find the drop placeholder
+                    const placeholder = document.querySelector('.drop-placeholder');
+                    if (!placeholder) return;
+                    
+                    if (sourceContainer === 'library-videos') {
+                        // Add from library
+                        addVideoToPlaylist(draggedItem.dataset.id, 
+                            placeholder.previousElementSibling ? 
+                            Array.from(currentPlaylist.querySelectorAll('.video-item'))
+                                .indexOf(placeholder.previousElementSibling) + 1 : 0);
+                    } else if (sourceContainer === 'current-playlist') {
+                        // Reorder existing item
+                        currentPlaylist.insertBefore(draggedItem, placeholder);
+                        playlistChanges.reordered = true;
+                        autoSavePlaylist();
+                    }
+                    
+                    // Remove the placeholder
+                    placeholder.remove();
+                }
+            }
+            
+            // Reset the draggedItem
+            draggedItem = null;
+        }
+        
+        // Add video to playlist at a specific position
+        function addVideoToPlaylist(videoId, position = -1) {
+            console.log(`Adding video ${videoId} to playlist at position ${position}`);
+            // Find the video in the library
+            const libraryItem = document.querySelector(`#library-videos .video-item[data-id="${videoId}"]`);
+            if (!libraryItem) {
+                console.error(`Video item with ID ${videoId} not found in library`);
+                return;
+            }
+            
+            // Check if playlist is empty
+            const emptyMessage = currentPlaylist.querySelector('.text-center');
+            if (emptyMessage) {
+                emptyMessage.remove();
+            }
+            
+            // Get current position if not specified
+            if (position === -1) {
+                position = document.querySelectorAll('#current-playlist .video-item').length;
+            }
+            
+            // Create a unique timestamp for this item
+            const timestamp = Date.now();
+            const tempId = `temp_${videoId}_${timestamp}`;
+            
+            // Create a new playlist item
+            const newItem = document.createElement('div');
+            newItem.className = 'video-item';
+            newItem.setAttribute('draggable', 'true');
+            newItem.dataset.id = videoId;
+            newItem.dataset.position = position;
+            newItem.dataset.playlistItemId = tempId;
+            
+            // Create drag handle
+            const dragHandle = document.createElement('div');
+            dragHandle.className = 'drag-handle';
+            dragHandle.innerHTML = '<i class="bi bi-grip-vertical"></i>';
+            
+            // Create thumbnail
+            const thumbnail = document.createElement('img');
+            thumbnail.src = libraryItem.dataset.thumbnail || libraryItem.querySelector('img').src;
+            thumbnail.alt = libraryItem.dataset.title || libraryItem.querySelector('.title').textContent;
+            
+            // Create title
+            const title = document.createElement('div');
+            title.className = 'title';
+            title.textContent = libraryItem.dataset.title || libraryItem.querySelector('.title').textContent;
+            
+            // Create actions
+            const actions = document.createElement('div');
+            actions.className = 'actions';
+            
+            // Create play button
+            const playButton = document.createElement('button');
+            playButton.title = 'Play';
+            playButton.innerHTML = '<i class="bi bi-play-fill"></i>';
+            playButton.onclick = function() {
+                playVideo(videoId);
+            };
+            
+            // Create remove button
+            const removeButton = document.createElement('button');
+            removeButton.title = 'Remove';
+            removeButton.innerHTML = '<i class="bi bi-trash"></i>';
+            removeButton.onclick = function() {
+                removeFromPlaylist(this);
+            };
+            
+            // Add buttons to actions
+            actions.appendChild(playButton);
+            actions.appendChild(removeButton);
+            
+            // Add all elements to the new item
+            newItem.appendChild(dragHandle);
+            newItem.appendChild(thumbnail);
+            newItem.appendChild(title);
+            newItem.appendChild(actions);
+            
+            // Add drag events to new item
+            newItem.addEventListener('dragstart', handleDragStart);
+            newItem.addEventListener('dragend', handleDragEnd);
+            
+            // Insert the new item at the right position
+            if (position !== -1) {
+                const items = Array.from(currentPlaylist.querySelectorAll('.video-item'));
+                if (position < items.length) {
+                    currentPlaylist.insertBefore(newItem, items[position]);
+                } else {
+                    currentPlaylist.appendChild(newItem);
+                }
+            } else {
+                currentPlaylist.appendChild(newItem);
+            }
+            
+            console.log(`Item added. Video ID: ${videoId}, Position: ${position}, Temp ID: ${timestamp}`);
+            
+            // Track change for saving - store just the timestamp portion as tempId
+            playlistChanges.added.push({
+                videoId: videoId,
+                position: position,
+                tempId: timestamp.toString()
+            });
+            
+            // Show save button
+            saveButton.classList.add('btn-primary');
+            saveButton.classList.remove('btn-outline-light');
+            
+            // Auto-save changes
+            autoSavePlaylist();
+        }
+        
+        // Remove video from playlist
+        function removeFromPlaylist(button) {
+            const item = button.closest('.video-item');
+            const itemId = item.dataset.playlistItemId;
+            
+            // Track the removal for saving
+            if (!itemId.startsWith('temp_')) {
+                playlistChanges.removed.push(itemId);
+            } else {
+                // If it's a temp item, remove it from the added array
+                const index = playlistChanges.added.findIndex(added => 
+                    added.tempId === itemId.replace(`temp_${item.dataset.id}_`, '')
+                );
+                if (index !== -1) {
+                    playlistChanges.added.splice(index, 1);
+                }
+            }
+            
+            // Remove the item
+            item.remove();
+            
+            // If no items left, show empty message
+            if (currentPlaylist.querySelectorAll('.video-item').length === 0) {
+                const emptyMessage = document.createElement('div');
+                emptyMessage.className = 'text-center p-4';
+                emptyMessage.innerHTML = '<p>No videos in this playlist yet.<br>Drag videos from the library to add them.</p>';
+                currentPlaylist.appendChild(emptyMessage);
+            }
+            
+            // Show save button
+            saveButton.classList.add('btn-primary');
+            saveButton.classList.remove('btn-outline-light');
+            
+            // Auto-save changes
+            autoSavePlaylist();
+        }
+        
+        // Setup search functionality
+        function setupSearch() {
+            librarySearch.addEventListener('input', function() {
+                const query = this.value.toLowerCase();
+                const items = libraryVideos.querySelectorAll('.video-item');
+                
+                items.forEach(item => {
+                    const title = item.querySelector('.title').textContent.toLowerCase();
+                    if (title.includes(query)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+        
+        // Setup buttons
+        function setupButtons() {
+            // Save button
+            saveButton.addEventListener('click', function() {
+                autoSavePlaylist();
+            });
+            
+            // Rename button
+            renameButton.addEventListener('click', function() {
+                const newName = prompt('Enter a new name for this playlist:', '{{ playlist.name }}');
+                if (newName && newName.trim() !== '') {
+                    fetch(`/api/playlist/${playlistId}/rename`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ name: newName })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update the page title and playlist name without reload
+                            document.title = `${newName} - Vibe Playlist`;
+                            document.querySelector('.playlist-info h2').textContent = newName;
+                        } else {
+                            console.error('Error renaming playlist:', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error renaming playlist:', error);
+                    });
+                }
+            });
+        }
+        
+        // Shuffle the playlist
+        function shufflePlaylist() {
+            const items = Array.from(currentPlaylist.querySelectorAll('.video-item'));
+            if (items.length <= 1) return;
+            
+            // Fisher-Yates shuffle algorithm
+            for (let i = items.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                currentPlaylist.insertBefore(items[j], items[i].nextSibling);
+            }
+            
+            // Update positions
+            Array.from(currentPlaylist.querySelectorAll('.video-item')).forEach((item, index) => {
+                item.dataset.position = index;
+            });
+            
+            // Mark as reordered
+            playlistChanges.reordered = true;
+            
+            // Auto-save changes
+            autoSavePlaylist();
+        }
+        
+        // Create a video item element (for adding to playlist)
+        function createVideoItemElement(videoData, itemId) {
+            const template = document.getElementById('video-item-template');
+            const clone = template.firstElementChild.cloneNode(true);
+            
+            clone.dataset.id = videoData.id;
+            if (itemId) {
+                clone.dataset.itemId = itemId;
+            }
+            
+            const thumbnailImg = clone.querySelector('.thumb');
+            thumbnailImg.src = `/thumbnails/${videoData.id}`;
+            thumbnailImg.alt = videoData.title;
+            
+            clone.querySelector('.video-title').textContent = videoData.title;
+            clone.querySelector('.video-channel').textContent = videoData.uploader;
+            
+            // Update play button to pass the event correctly
+            const playButton = clone.querySelector('.actions button[title="Play"]');
+            if (playButton) {
+                playButton.setAttribute('onclick', `playVideo('${videoData.id}', event)`);
+            }
+            
+            return clone;
+        }
+    </script>
+    <!-- Video item template -->
+    <div id="video-item-template" style="display: none;">
+        <div class="video-item">
+            <img src="" alt="Thumbnail" class="thumb">
+            <div class="title"></div>
+            <div class="actions">
+                <button onclick="playVideo(this.closest('.video-item').dataset.id, event)" title="Play">
+                    <i class="bi bi-play-fill"></i>
+                </button>
+                <button onclick="removeFromPlaylist(this.closest('.video-item').dataset.id)" title="Remove">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

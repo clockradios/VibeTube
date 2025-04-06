@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header card-header-dark d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Download Queue</h5>
+                <div>
+                    <span class="badge bg-info">{{ queue_count }} in queue</span>
+                    <span class="badge bg-success ms-2">{{ downloaded_count }} downloaded</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped table-sticky-header mb-0">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Channel</th>
+                                <th>Upload Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for video in queued_videos %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2">
+                                            {% if video.thumbnail_url %}
+                                            <div class="video-thumbnail-container">
+                                                <img src="{{ video.thumbnail_url }}" alt="Thumbnail" class="video-thumbnail">
+                                            </div>
+                                            {% else %}
+                                            <div class="video-thumbnail-container bg-secondary d-flex align-items-center justify-content-center">
+                                                <i class="bi bi-image text-white"></i>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <a href="https://www.youtube.com/watch?v={{ video.video_id }}" target="_blank" class="text-decoration-none" style="max-width: 300px;" class="text-truncate">
+                                            {{ video.title }}
+                                        </a>
+                                    </div>
+                                </td>
+                                <td>{{ video.channel_name }}</td>
+                                <td>
+                                    {% if video.upload_date %}
+                                        {% set year = video.upload_date[:4] %}
+                                        {% set month = video.upload_date[4:6] %}
+                                        {% set day = video.upload_date[6:8] %}
+                                        {{ year }}-{{ month }}-{{ day }}
+                                    {% else %}
+                                        Unknown
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-warning">Queued</span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary d-flex align-items-center" onclick="downloadNow('{{ video.video_id }}')">
+                                        <i class="bi bi-download me-1"></i> Download Now
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            
+                            {% if not queued_videos %}
+                            <tr>
+                                <td colspan="5" class="text-center py-3">
+                                    <p class="mb-0">No videos in the download queue.</p>
+                                    <p class="mb-0">All videos have been downloaded or no videos have been added.</p>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header card-header-info">
+                <h5 class="card-title mb-0">About the Download Queue</h5>
+            </div>
+            <div class="card-body">
+                <p>
+                    The download queue automatically processes videos based on your configured download delay (default is one minute between downloads) to avoid overloading your network or YouTube's servers.
+                </p>
+                <p>
+                    You can change this delay in the <a href="/settings">Settings</a> page.
+                </p>
+                <p>
+                    Each video will be downloaded to its own folder with:
+                </p>
+                <ul>
+                    <li>The video file in MP4 format</li>
+                    <li>Metadata files for Jellyfin (NFO format)</li>
+                    <li>Metadata files for Plex (XML format)</li>
+                    <li>Video thumbnail</li>
+                </ul>
+                <p>
+                    Videos are organized by subfolder, based on the source's configuration.
+                </p>
+                <p>
+                    <a href="/videos?downloaded=false" class="btn btn-outline-primary">
+                        <i class="bi bi-filter"></i> View All Undownloaded Videos
+                    </a>
+                    <a href="/videos?downloaded=true" class="btn btn-outline-success ms-2">
+                        <i class="bi bi-filter"></i> View All Downloaded Videos
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function downloadNow(videoId) {
+        fetch(`/download_video/${videoId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error starting download');
+        });
+    }
+</script>
+{% endblock %} 

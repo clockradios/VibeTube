@@ -1,0 +1,11 @@
+# Ignore environment file
+.env
+
+# Ignore Python cache
+**/__pycache__/
+*.py[cod]
+
+# Ignore folders
+downloads/
+db/
+

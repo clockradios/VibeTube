@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <!-- Video.js CSS -->
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+        
+        .video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+        }
+        
+        .vjs-matrix.video-js {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        .vjs-matrix.video-js .vjs-tech {
+            object-fit: contain;
+        }
+        
+        /* Custom Video.js theme */
+        .vjs-matrix.video-js .vjs-control-bar {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .vjs-matrix .vjs-button > .vjs-icon-placeholder:before {
+            color: #fff;
+        }
+        
+        .vjs-matrix .vjs-play-progress {
+            background-color: #00aaff;
+        }
+        
+        .vjs-matrix .vjs-volume-level {
+            background-color: #00aaff;
+        }
+        
+        .custom-controls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: space-between;
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .video-container:hover .custom-controls {
+            opacity: 1;
+        }
+        
+        .player-title {
+            color: white;
+            font-weight: bold;
+            padding: 5px 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 60%;
+        }
+        
+        .player-buttons a {
+            color: white;
+            text-decoration: none;
+            margin-left: 15px;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <div class="custom-controls">
+            <div class="player-title">{{ video.title }}</div>
+            <div class="player-buttons">
+                <a href="/download/{{ video.video_id }}" title="Download this video"><i class="bi bi-download"></i></a>
+                <a href="/videos" title="Back to videos"><i class="bi bi-arrow-left"></i></a>
+            </div>
+        </div>
+        
+        <video 
+            id="my-video"
+            class="video-js vjs-matrix vjs-big-play-centered"
+            controls
+            preload="auto"
+            poster="{{ video.thumbnail_url }}"
+            data-setup="{}"
+        >
+            <source src="/download/{{ video.video_id }}" type="video/mp4">
+            <p class="vjs-no-js">
+                To view this video please enable JavaScript, and consider upgrading to a
+                web browser that <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+            </p>
+        </video>
+    </div>
+    
+    <!-- Video.js -->
+    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Video.js player
+            const player = videojs('my-video', {
+                autoplay: true,
+                fluid: false,
+                responsive: true,
+                playbackRates: [0.5, 1, 1.25, 1.5, 2],
+                html5: {
+                    vhs: {
+                        overrideNative: true
+                    },
+                    nativeAudioTracks: false,
+                    nativeVideoTracks: false
+                },
+                liveui: false,
+                controls: true,
+                preload: "auto",
+                controlBar: {
+                    children: [
+                        'playToggle',
+                        'progressControl',
+                        'currentTimeDisplay',
+                        'timeDivider',
+                        'durationDisplay',
+                        'volumePanel',
+                        'playbackRateMenuButton',
+                        'fullscreenToggle'
+                    ]
+                }
+            });
+            
+            // Handle errors better
+            player.on('error', function() {
+                console.error('Video playback error:', player.error());
+                
+                // Try loading the video again after a brief delay
+                setTimeout(() => {
+                    player.src({ src: '/download/{{ video.video_id }}', type: 'video/mp4' });
+                    player.load();
+                    player.play().catch(e => console.error('Retry failed:', e));
+                }, 1000);
+            });
+            
+            // Make sure the video starts playing when ready
+            player.ready(function() {
+                // Force preloading the entire video for better seeking
+                player.tech_.preload('auto');
+                
+                // Set buffer size larger
+                if (player.tech_ && player.tech_.vhs) {
+                    player.tech_.vhs.GOAL_BUFFER_LENGTH = 30;
+                    player.tech_.vhs.MAX_GOAL_BUFFER_LENGTH = 60;
+                }
+                
+                player.play().catch(e => {
+                    console.warn('Autoplay was prevented', e);
+                    // Show play button prominently
+                    document.querySelector('.vjs-big-play-button').style.display = 'block';
+                });
+            });
+            
+            // Improve seeking behavior
+            player.on('seeking', function() {
+                // This helps force the player to actually seek rather than just appearing to
+                const currentTime = player.currentTime();
+                
+                // Sometimes the 'seeked' event doesn't fire, so we'll set a timeout
+                // to check if the seeking completed after a reasonable delay
+                const seekTimeout = setTimeout(function() {
+                    if (player.seeking()) {
+                        console.log('Seeking hung, retrying...');
+                        // Try to re-seek to the same position to kick the player
+                        player.currentTime(currentTime);
+                    }
+                }, 2000);
+                
+                player.one('seeked', function() {
+                    clearTimeout(seekTimeout);
+                });
+            });
+            
+            // Toggle fullscreen on double click
+            player.on('dblclick', function() {
+                if (!document.fullscreenElement) {
+                    player.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+            
+            // Force seeking to work better by preloading more of the video
+            player.preload('auto');
+            
+            // Add hotkey support for seeking
+            document.addEventListener('keydown', function(e) {
+                const seekAmount = 10; // seconds
+                
+                switch(e.key) {
+                    case 'ArrowRight':
+                        const newTimeRight = player.currentTime() + seekAmount;
+                        player.currentTime(newTimeRight);
+                        // Force update UI
+                        player.trigger('timeupdate');
+                        break;
+                    case 'ArrowLeft':
+                        const newTimeLeft = Math.max(0, player.currentTime() - seekAmount);
+                        player.currentTime(newTimeLeft);
+                        // Force update UI
+                        player.trigger('timeupdate');
+                        break;
+                    case ' ':
+                        if (player.paused()) {
+                            player.play();
+                        } else {
+                            player.pause();
+                        }
+                        e.preventDefault();
+                        break;
+                    case 'f':
+                        if (!document.fullscreenElement) {
+                            player.requestFullscreen();
+                        } else {
+                            document.exitFullscreen();
+                        }
+                        break;
+                    case 'm':
+                        player.muted(!player.muted());
+                        break;
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
