@@ -248,18 +248,23 @@ def download_video(video_id: str) -> Tuple[bool, str]:
             download_path = subfolder.path
     
     # Create a safer filename by replacing any characters that might cause issues
-    safe_title = video.title.replace('/', '_').replace('\\', '_').replace(':', '_').replace('?', '_').replace('"', '_').replace('*', '_').replace('<', '_').replace('>', '_').replace('|', '_')
-    safe_channel = video.channel_name.replace('/', '_').replace('\\', '_').replace(':', '_').replace('?', '_').replace('"', '_').replace('*', '_').replace('<', '_').replace('>', '_').replace('|', '_')
+    # Ensure title and channel_name are strings, even if None in DB
+    title = video.title or ""
+    channel_name = video.channel_name or ""
+    
+    safe_title = title.replace('/', '_').replace('\\', '_').replace(':', '_').replace('?', '_').replace('"', '_').replace('*', '_').replace('<', '_').replace('>', '_').replace('|', '_')
+    safe_channel = channel_name.replace('/', '_').replace('\\', '_').replace(':', '_').replace('?', '_').replace('"', '_').replace('*', '_').replace('<', '_').replace('>', '_').replace('|', '_')
     
     # Create individual folder for this video
-    video_folder_name = safe_title
+    # Use video_id if title is empty to avoid creating unnamed folders
+    video_folder_name = safe_title if safe_title else video.video_id 
     video_folder_path = os.path.join(download_path, video_folder_name)
     
     # Ensure video directory exists
     os.makedirs(video_folder_path, exist_ok=True)
     
-    # Create the video filename (same as folder name)
-    video_filename = f"{safe_title}.mp4"
+    # Create the video filename (use video_id if title is empty)
+    video_filename = f"{video_folder_name}.mp4" 
     output_file = os.path.join(video_folder_path, video_filename)
     logger.info(f"Downloading to: {output_file}")
 
@@ -421,21 +426,31 @@ def download_video(video_id: str) -> Tuple[bool, str]:
         
         return False, f"Exception: {error_message}"
 
-def create_jellyfin_nfo(video: Video, detailed_info: Dict[str, Any], output_path: str) -> None:
-    """
-    Create an NFO file for Jellyfin/Kodi compatibility
-    NFO is an XML format that Jellyfin can read for video metadata
-    """
+def create_jellyfin_nfo(video: Video, detailed_info: Dict[str, Any], output_dir: str) -> None:
+    """Create a .nfo file for Jellyfin metadata"""
     try:
+        # Ensure title is a string, use video_id if None/empty
+        title = video.title or video.video_id
+        safe_title = title.replace('/', '_').replace('\\', '_').replace(':', '_') \
+                       .replace('?', '_').replace('"', '_').replace('*', '_') \
+                       .replace('<', '_').replace('>', '_').replace('|', '_')
+        
+        nfo_filename = os.path.join(output_dir, f"{safe_title}.nfo")
+        
+        # Get upload date in YYYY-MM-DD format
+        upload_date_str = ""
+        if detailed_info and "upload_date" in detailed_info:
+            upload_date_str = detailed_info["upload_date"][:10]
+        
         # Create the XML structure
         movie = ET.Element("movie")
         
         # Basic info
-        title = ET.SubElement(movie, "title")
-        title.text = video.title
+        title_element = ET.SubElement(movie, "title")
+        title_element.text = title
         
         originaltitle = ET.SubElement(movie, "originaltitle")
-        originaltitle.text = video.title
+        originaltitle.text = title
         
         # YouTube specific ID
         id_element = ET.SubElement(movie, "id")
@@ -508,9 +523,8 @@ def create_jellyfin_nfo(video: Video, detailed_info: Dict[str, Any], output_path
         pretty_xml = dom.toprettyxml(indent="  ")
         
         # Save the NFO file with the same name as the video
-        safe_title = video.title.replace('/', '_').replace('\\', '_').replace(':', '_').replace('?', '_').replace('"', '_').replace('*', '_').replace('<', '_').replace('>', '_').replace('|', '_')
         nfo_filename = f"{safe_title}.nfo"
-        nfo_path = os.path.join(output_path, nfo_filename)
+        nfo_path = os.path.join(output_dir, nfo_filename)
         
         with open(nfo_path, 'w', encoding='utf-8') as f:
             f.write(pretty_xml)
@@ -520,18 +534,27 @@ def create_jellyfin_nfo(video: Video, detailed_info: Dict[str, Any], output_path
     except Exception as e:
         logger.error(f"Error creating NFO file: {e}")
 
-def create_plex_metadata(video: Video, detailed_info: Dict[str, Any], output_path: str) -> None:
-    """
-    Create metadata files for Plex
-    Plex can use .xml metadata files for local media assets
-    """
+def create_plex_metadata(video: Video, detailed_info: Dict[str, Any], output_dir: str) -> None:
+    """Create metadata files compatible with Plex Movie agent"""
     try:
+        # Ensure title is a string, use video_id if None/empty
+        title = video.title or video.video_id
+        safe_title = title.replace('/', '_').replace('\\', '_').replace(':', '_') \
+                       .replace('?', '_').replace('"', '_').replace('*', '_') \
+                       .replace('<', '_').replace('>', '_').replace('|', '_')
+        
+        # Plex expects metadata files named after the video file
+        video_filename_base = safe_title
+        
+        # Create summary file (.summary)
+        summary_filename = os.path.join(output_dir, f"{video_filename_base}.summary")
+        
         # Create the XML structure for Plex
         metadata = ET.Element("metadata")
         
         # Basic info
-        title = ET.SubElement(metadata, "title")
-        title.text = video.title
+        title_element = ET.SubElement(metadata, "title")
+        title_element.text = title
         
         # YouTube URL and ID
         youtube = ET.SubElement(metadata, "youtube")
@@ -589,9 +612,8 @@ def create_plex_metadata(video: Video, detailed_info: Dict[str, Any], output_pat
         pretty_xml = dom.toprettyxml(indent="  ")
         
         # Save the XML file with the name that Plex prefers
-        safe_title = video.title.replace('/', '_').replace('\\', '_').replace(':', '_').replace('?', '_').replace('"', '_').replace('*', '_').replace('<', '_').replace('>', '_').replace('|', '_')
         xml_filename = f"{safe_title}.xml"
-        xml_path = os.path.join(output_path, xml_filename)
+        xml_path = os.path.join(output_dir, xml_filename)
         
         with open(xml_path, 'w', encoding='utf-8') as f:
             f.write(pretty_xml)
@@ -663,7 +685,8 @@ def process_download_queue():
                     Source.source_type == 'video',
                     Video.downloaded == False,
                     Video.file_deleted == False,
-                    Video.skip == False
+                    Video.skip == False,
+                    Video.failed_download == False
                 ).first()
                 video = standalone_videos
             

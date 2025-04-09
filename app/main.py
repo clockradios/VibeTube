@@ -374,23 +374,29 @@ async def set_default_subfolder(subfolder_id: int, db: Session = Depends(get_db)
 async def add_source_endpoint(
     source_type: str = Form(...),
     source_id: str = Form(...),
+    db: Session = Depends(get_db),
     subfolder_id: Optional[int] = Form(None),
-    auto_download: bool = Form(True),  # Default to True if not provided
-    background_tasks: BackgroundTasks = BackgroundTasks(),
-    db: Session = Depends(get_db)
+    auto_download: bool = Form(True),
+    background_tasks: BackgroundTasks = BackgroundTasks()
 ):
     # If no subfolder specified, use the default
     if not subfolder_id:
         default_subfolder = db.query(Subfolder).filter_by(is_default=True).first()
         if default_subfolder:
             subfolder_id = default_subfolder.id
-    
-    success, message = add_source(source_type, source_id, subfolder_id, auto_download)
-    
-    if success:
-        return RedirectResponse(url="/sources", status_code=303)
-    else:
-        raise HTTPException(status_code=400, detail=message)
+        else:
+            # Handle case where no default subfolder exists if necessary
+            # For now, we might proceed without a subfolder or raise an error
+            # Let's log a warning and proceed without a specific subfolder_id for now
+            logger.warning("No default subfolder found, adding source without a specific subfolder.")
+            subfolder_id = None # Explicitly set to None
+
+    # Add the potentially long-running task to the background
+    background_tasks.add_task(add_source, source_type, source_id, subfolder_id, auto_download)
+
+    # Return immediately, informing the user the process has started
+    # Redirecting to the sources page might be best UX for now
+    return RedirectResponse(url="/sources", status_code=303)
 
 @app.post("/download_video/{video_id}")
 async def download_video_endpoint(
